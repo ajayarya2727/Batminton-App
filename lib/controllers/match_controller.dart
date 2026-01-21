@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/match_model.dart';
+import '../models/badminton_models.dart';
+import '../services/storage_service.dart';
 import '../utils/sample_data.dart';
 
 class MatchController extends GetxController {
-  final RxList<MatchModel> matches = <MatchModel>[].obs;
+  final RxList<BadmintonMatchModel> matches = <BadmintonMatchModel>[].obs;
   final RxBool isLoading = false.obs;
 
   @override
@@ -15,22 +16,47 @@ class MatchController extends GetxController {
     loadMatches();
   }
 
-  // Load matches from local storage
+  // Load matches from individual JSON files
   Future<void> loadMatches() async {
     try {
       isLoading.value = true;
-      final prefs = await SharedPreferences.getInstance();
-      final matchesJson = prefs.getString('Batminton matches');
       
-      if (matchesJson != null) {
-        final List<dynamic> matchesList = json.decode(matchesJson);
-        matches.value = matchesList
-            .map((json) => MatchModel.fromJson(json))
-            .toList();
+      // Try to load from new JSON file storage first
+      final loadedMatches = await StorageService.loadAllMatches();
+      
+      if (loadedMatches.isNotEmpty) {
+        matches.value = loadedMatches;
       } else {
-        // Load sample data if no matches exist
-        matches.value = SampleData.getSampleMatches();
-        saveMatches(); // Save sample data to local storage
+        // Check if we have old SharedPreferences data to migrate
+        final prefs = await SharedPreferences.getInstance();
+        final matchesJson = prefs.getString('Batminton matches');
+        
+        if (matchesJson != null) {
+          // Migrate old data to new storage format
+          final List<dynamic> matchesList = json.decode(matchesJson);
+          final oldMatches = matchesList
+              .map((json) => BadmintonMatchModel.fromJson(json))
+              .toList();
+          
+          // Save each match to individual files
+          for (final match in oldMatches) {
+            await StorageService.saveMatch(match);
+          }
+          
+          // Clear old storage
+          await prefs.remove('Batminton matches');
+          
+          matches.value = oldMatches;
+        // } else {
+        //   // Load sample data if no matches exist
+        //   final sampleMatches = SampleData.getSampleMatches();
+        //   matches.value = sampleMatches;
+          
+        //   // Save sample data to new storage format
+        //   for (final match in sampleMatches) {
+        //     await StorageService.saveMatch(match);
+        //   }
+        }
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to load Batminton matches: $e');
@@ -39,29 +65,28 @@ class MatchController extends GetxController {
     }
   }
 
-  // Save matches to local storage
+  // Save matches to individual JSON files
   Future<void> saveMatches() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final matchesJson = json.encode(
-        matches.map((match) => match.toJson()).toList(),
-      );
-      await prefs.setString('Batminton matches', matchesJson);
+      // Save all matches to individual files
+      for (final match in matches) {
+        await StorageService.saveMatch(match);
+      }
     } catch (e) {
       Get.snackbar('Error', 'Failed to save Batminton matches: $e');
     }
   }
 
   // Add new match
-  void addMatch(MatchModel match) {
+  Future<void> addMatch(BadmintonMatchModel match) async {
     matches.add(match);
-    saveMatches();
+    await StorageService.saveMatch(match);
     Get.snackbar('Success', 'Batminton Match created successfully!');
   }
 
   // Update match score - Smart milestone logic with multi-round support
-  void updateMatchScore(String matchId, int team1Score, int team2Score) {
-    final matchIndex = matches.indexWhere((match) => match.id == matchId);
+  Future<void> updateMatchScore(String matchId, int team1Score, int team2Score) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex != -1) {
       final match = matches[matchIndex];
       
@@ -75,15 +100,12 @@ class MatchController extends GetxController {
       // Check if someone just reached 30 - complete current round
       if (team1Score == 30 || team2Score == 30) {
         final roundWinner = team1Score == 30 ? 'team1' : 'team2';
-        _completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
+        await _completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
         return;
       }
       
-      // Update current score
-      matches[matchIndex] = match.copyWith(
-        team1Score: team1Score,
-        team2Score: team2Score,
-      );
+      // Update current round scores
+      matches[matchIndex] = match.updateCurrentRoundScores(team1Score, team2Score);
       
       // Check if someone JUST reached 21 AND 21 milestone hasn't been reached before
       bool showPopup = false;
@@ -101,87 +123,48 @@ class MatchController extends GetxController {
       
       if (showPopup) {
         // Mark 21 milestone as reached
-        matches[matchIndex] = matches[matchIndex].copyWith(milestone21Reached: true);
+        matches[matchIndex] = matches[matchIndex].markMilestone21Reached();
         _showContinueDialog(matchId, team1Score, team2Score);
       } else {
         // Normal score, just save
-        saveMatches();
+        await StorageService.saveMatch(matches[matchIndex]);
       }
     }
   }
 
   // Complete current round and check if match should continue
-  void _completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) {
-    final matchIndex = matches.indexWhere((match) => match.id == matchId);
+  Future<void> _completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
 
     final match = matches[matchIndex];
     
-    // Add round winner to appropriate list
-    List<int> newTeam1RoundWins = List.from(match.team1RoundWins);
-    List<int> newTeam2RoundWins = List.from(match.team2RoundWins);
+    // Complete the current round
+    final updatedMatch = match.completeCurrentRound(roundWinner);
+    matches[matchIndex] = updatedMatch;
     
-    if (roundWinner == 'team1') {
-      newTeam1RoundWins.add(match.currentRound);
-    } else {
-      newTeam2RoundWins.add(match.currentRound);
-    }
+    await StorageService.saveMatch(updatedMatch);
     
-    // Add current round scores to history
-    List<Map<String, int>> newRoundScores = List.from(match.roundScores);
-    newRoundScores.add({
-      'team1': team1Score,
-      'team2': team2Score,
-      'winner': roundWinner == 'team1' ? 1 : 2,
-      'round': match.currentRound,
-    });
-    
-    // Check if match is complete (someone won 2 rounds)
-    bool matchComplete = newTeam1RoundWins.length >= 2 || newTeam2RoundWins.length >= 2;
-    String? matchWinner;
-    
-    if (matchComplete) {
-      matchWinner = newTeam1RoundWins.length >= 2 ? 'team1' : 'team2';
-    }
-    
-    // Update match with round completion
-    matches[matchIndex] = match.copyWith(
-      team1Score: team1Score,
-      team2Score: team2Score,
-      team1RoundWins: newTeam1RoundWins,
-      team2RoundWins: newTeam2RoundWins,
-      roundScores: newRoundScores,
-      isCompleted: matchComplete,
-      winner: matchWinner,
-    );
-    
-    saveMatches();
-    
-    if (matchComplete) {
+    if (updatedMatch.isMatchComplete) {
       // Show match complete dialog
-      _showMatchCompleteDialog(matchId, matchWinner!, newTeam1RoundWins.length, newTeam2RoundWins.length);
+      _showMatchCompleteDialog(matchId, updatedMatch.matchWinner!, updatedMatch.team1RoundsWon, updatedMatch.team2RoundsWon);
     } else {
       // Show round complete dialog and start next round
-      _showRoundCompleteDialog(matchId, roundWinner, match.currentRound, team1Score, team2Score);
+      _showRoundCompleteDialog(matchId, roundWinner, match.currentRoundNumber, team1Score, team2Score);
     }
   }
 
   // Start next round
-  void _startNextRound(String matchId) {
-    final matchIndex = matches.indexWhere((match) => match.id == matchId);
+  Future<void> _startNextRound(String matchId) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
 
     final match = matches[matchIndex];
     
-    // Reset for next round
-    matches[matchIndex] = match.copyWith(
-      currentRound: match.currentRound + 1,
-      team1Score: 0,
-      team2Score: 0,
-      milestone21Reached: false,
-    );
+    // Start next round
+    matches[matchIndex] = match.startNextRound();
     
-    saveMatches();
+    await StorageService.saveMatch(matches[matchIndex]);
   }
 
   // Show dialog only for 21 points (first time) - Updated for rounds
@@ -195,7 +178,7 @@ class MatchController extends GetxController {
 
     Get.dialog(
       AlertDialog(
-        title: Text('🏸 21 Points Reached! (Round ${match.currentRound})'),
+        title: Text('🏸 21 Points Reached! (Round ${match.currentRoundNumber})'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -211,7 +194,7 @@ class MatchController extends GetxController {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Round ${match.currentRound} Score: $team1Score - $team2Score',
+                'Round ${match.currentRoundNumber} Score: $team1Score - $team2Score',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
@@ -237,7 +220,7 @@ class MatchController extends GetxController {
             onPressed: () {
               Get.back();
               // Yes - Continue playing
-              saveMatches();
+              StorageService.saveMatch(matches[matches.indexWhere((m) => m.matchId == matchId)]);
               Get.snackbar(
                 'Continue Playing', 
                 'Round continues to 30 points...',
@@ -254,41 +237,6 @@ class MatchController extends GetxController {
         ],
       ),
       barrierDismissible: false,
-    );
-  }
-
-  // Show match complete dialog (for 30 points or manual end)
-  void _showMatchComplete(String matchId, String winner, int team1Score, int team2Score, String reason) {
-    final match = getMatchById(matchId);
-    if (match == null) return;
-    
-    final winnerName = winner == 'team1' 
-        ? match.team1Players.join(' & ') 
-        : match.team2Players.join(' & ');
-    
-    Get.dialog(
-      AlertDialog(
-        title: const Text('🏆 Match Complete!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$winnerName Won!',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(reason),
-            const SizedBox(height: 12),
-            Text('Final Score: $team1Score - $team2Score'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -416,7 +364,7 @@ class MatchController extends GetxController {
                     style: const TextStyle(fontSize: 12),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ],
         ),
@@ -434,81 +382,81 @@ class MatchController extends GetxController {
     );
   }
 
-  // Complete match (simple version)
-  void _completeMatch(String matchId, String winner, int team1Score, int team2Score) {
-    final matchIndex = matches.indexWhere((match) => match.id == matchId);
-    if (matchIndex == -1) return;
-
-    final match = matches[matchIndex];
-    
-    // Complete the match
-    matches[matchIndex] = match.copyWith(
-      team1Score: team1Score,
-      team2Score: team2Score,
-      isCompleted: true,
-      winner: winner,
-    );
-    
-    saveMatches();
-    
-    final winnerName = winner == 'team1' 
-        ? match.team1Players.join(' & ') 
-        : match.team2Players.join(' & ');
-    
-    Get.dialog(
-      AlertDialog(
-        title: const Text('🏆 Match Complete!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$winnerName Won!',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text('Final Score: $team1Score - $team2Score'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Complete match
-  void completeMatch(String matchId) {
-    final matchIndex = matches.indexWhere((match) => match.id == matchId);
+  Future<void> completeMatch(String matchId) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex != -1) {
-      matches[matchIndex] = matches[matchIndex].copyWith(isCompleted: true);
-      saveMatches();
+      matches[matchIndex] = matches[matchIndex].copyWith(status: BadmintonMatchStatus.completed);
+      await StorageService.saveMatch(matches[matchIndex]);
       Get.snackbar('Batminton Match Completed', 'Batminton Match has been marked as completed!');
     }
   }
 
   // Delete match
-  void deleteMatch(String matchId) {
-    matches.removeWhere((match) => match.id == matchId);
-    saveMatches();
+  Future<void> deleteMatch(String matchId) async {
+    matches.removeWhere((match) => match.matchId == matchId);
+    await StorageService.deleteMatch(matchId);
     Get.snackbar('Deleted', 'Batminton Match deleted successfully!');
   }
 
   // Get matches by type
-  List<MatchModel> getMatchesByType(String type) {
-    return matches.where((match) => match.matchType == type).toList();
+  List<BadmintonMatchModel> getMatchesByType(String type) {
+    return matches.where((match) => match.matchType.code == type).toList();
   }
 
   // Get match by ID
-  MatchModel? getMatchById(String id) {
+  BadmintonMatchModel? getMatchById(String id) {
     try {
-      return matches.firstWhere((match) => match.id == id);
+      return matches.firstWhere((match) => match.matchId == id);
     } catch (e) {
       return null;
     }
   }
 
-  void clearAllMatches() {}
+  void clearAllMatches() async {
+    matches.clear();
+    await StorageService.clearAllMatches();
+  }
+
+  // DEMO: Print any match JSON by ID for sir's evaluation
+  Future<void> printMatchJsonById(String matchId) async {
+    await StorageService.printMatchById(matchId);
+  }
+
+  // BREAK FEATURE: Pause/Resume match
+  Future<void> pauseMatch(String matchId) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex != -1) {
+      final match = matches[matchIndex];
+      if (match.status == BadmintonMatchStatus.inProgress) {
+        matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.paused);
+        await StorageService.saveMatch(matches[matchIndex]);
+        Get.snackbar(
+          'Match Paused', 
+          'Match has been paused. You can resume anytime.',
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade700,
+          icon: Icon(Icons.pause_circle, color: Colors.orange.shade700),
+        );
+      }
+    }
+  }
+
+  Future<void> resumeMatch(String matchId) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex != -1) {
+      final match = matches[matchIndex];
+      if (match.status == BadmintonMatchStatus.paused) {
+        matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.inProgress);
+        await StorageService.saveMatch(matches[matchIndex]);
+        Get.snackbar(
+          'Match Resumed', 
+          'Match has been resumed. Continue playing!',
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade700,
+          icon: Icon(Icons.play_circle, color: Colors.green.shade700),
+        );
+      }
+    }
+  }
 }

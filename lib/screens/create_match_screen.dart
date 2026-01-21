@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/match_controller.dart';
-import '../models/match_model.dart';
+import '../models/badminton_models.dart';
 
 class CreateMatchScreen extends StatelessWidget {
   const CreateMatchScreen({super.key});
@@ -9,7 +9,7 @@ class CreateMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MatchController controller = Get.find<MatchController>();
-    final RxString selectedMatchType = '1v1'.obs;
+    final Rx<BadmintonMatchType> selectedMatchType = BadmintonMatchType.singles.obs;
     final RxList<TextEditingController> team1Controllers = <TextEditingController>[].obs;
     final RxList<TextEditingController> team2Controllers = <TextEditingController>[].obs;
 
@@ -44,7 +44,7 @@ class CreateMatchScreen extends StatelessWidget {
   }
 
   Widget _buildMatchTypeSelector(
-    RxString selectedMatchType,
+    Rx<BadmintonMatchType> selectedMatchType,
     RxList<TextEditingController> team1Controllers,
     RxList<TextEditingController> team2Controllers,
   ) {
@@ -68,10 +68,10 @@ class CreateMatchScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Obx(() => Column(
               children: [
-                RadioListTile<String>(
+                RadioListTile<BadmintonMatchType>(
                   title: const Text('1v1'),
                   subtitle: const Text('Single player match'),
-                  value: '1v1',
+                  value: BadmintonMatchType.singles,
                   groupValue: selectedMatchType.value,
                   onChanged: (value) {
                     selectedMatchType.value = value!;
@@ -79,10 +79,10 @@ class CreateMatchScreen extends StatelessWidget {
                   },
                   activeColor: Colors.green.shade600,
                 ),
-                RadioListTile<String>(
+                RadioListTile<BadmintonMatchType>(
                   title: const Text('2v2'),
                   subtitle: const Text('Double player match'),
-                  value: '2v2',
+                  value: BadmintonMatchType.doubles,
                   groupValue: selectedMatchType.value,
                   onChanged: (value) {
                     selectedMatchType.value = value!;
@@ -99,11 +99,11 @@ class CreateMatchScreen extends StatelessWidget {
   }
 
   Widget _buildTeamInputs(
-    String matchType,
+    BadmintonMatchType matchType,
     RxList<TextEditingController> team1Controllers,
     RxList<TextEditingController> team2Controllers,
   ) {
-    final int playersPerTeam = matchType == '1v1' ? 1 : 2;
+    final int playersPerTeam = matchType.requiredPlayersPerTeam;
 
     return Column(
       children: [
@@ -168,7 +168,7 @@ class CreateMatchScreen extends StatelessWidget {
 
   Widget _buildCreateButton(
     MatchController controller,
-    RxString selectedMatchType,
+    Rx<BadmintonMatchType> selectedMatchType,
     RxList<TextEditingController> team1Controllers,
     RxList<TextEditingController> team2Controllers,
   ) {
@@ -253,7 +253,7 @@ class CreateMatchScreen extends StatelessWidget {
 
   Future<void> _createMatch(
     MatchController controller,
-    String matchType,
+    BadmintonMatchType matchType,
     RxList<TextEditingController> team1Controllers,
     RxList<TextEditingController> team2Controllers,
   ) async {
@@ -268,7 +268,7 @@ class CreateMatchScreen extends StatelessWidget {
         .where((name) => name.isNotEmpty)
         .toList();
 
-    final requiredPlayers = matchType == '1v1' ? 1 : 2;
+    final requiredPlayers = matchType.requiredPlayersPerTeam;
 
     if (team1Players.length != requiredPlayers) {
       Get.snackbar(
@@ -320,26 +320,41 @@ class CreateMatchScreen extends StatelessWidget {
       );
 
       // Create match
-      final match = MatchModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        matchType: matchType,
-        team1Players: team1Players,
-        team2Players: team2Players,
-        createdAt: DateTime.now(),
-        team1Score: 0,
-        team2Score: 0,
-        isCompleted: false,
-        currentRound: 1,
-        team1RoundWins: const [],
-        team2RoundWins: const [],
-        roundScores: const [],
-        milestone21Reached: false,
+      final matchId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      // Create teams with players
+      final team1 = BadmintonTeamModel(
+        teamId: 'team1_$matchId',
+        players: team1Players.asMap().entries.map((entry) => 
+          BadmintonPlayerModel(
+            playerId: 'p${entry.key + 1}_$matchId',
+            name: entry.value,
+          )
+        ).toList(),
       );
+      
+      final team2 = BadmintonTeamModel(
+        teamId: 'team2_$matchId',
+        players: team2Players.asMap().entries.map((entry) => 
+          BadmintonPlayerModel(
+            playerId: 'p${entry.key + 3}_$matchId',
+            name: entry.value,
+          )
+        ).toList(),
+      );
+      
+      final match = BadmintonMatchModel(
+        matchId: matchId,
+        matchType: matchType,
+        team1: team1,
+        team2: team2,
+        createdAt: DateTime.now(),
+      ).initializeFirstRound();
 
       // Add small delay for better UX
       await Future.delayed(const Duration(milliseconds: 500));
 
-      controller.addMatch(match);
+      await controller.addMatch(match);
       
       // Success feedback
       Get.snackbar(

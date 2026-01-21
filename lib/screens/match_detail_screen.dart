@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/match_controller.dart';
-import '../models/match_model.dart';
+import '../models/badminton_models.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final String matchId;
@@ -69,6 +69,9 @@ class MatchDetailScreen extends StatelessWidget {
               ],
               _buildScoreSection(match, controller),
               const SizedBox(height: 24),
+              // Add break/resume button for in-progress matches
+              if (!match.isCompleted) _buildBreakResumeButton(match, controller),
+              const SizedBox(height: 16),
               _buildMatchInfo(match),
               const SizedBox(height: 24),
               if (!match.isCompleted) _buildCompleteButton(match, controller),
@@ -79,7 +82,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchHeader(MatchModel match) {
+  Widget _buildMatchHeader(BadmintonMatchModel match) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -92,28 +95,28 @@ class MatchDetailScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: match.matchType == '1v1' 
-                        ? Colors.blue.shade100 
-                        : Colors.purple.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    match.matchType,
-                    style: TextStyle(
-                      color: match.matchType == '1v1' 
-                          ? Colors.blue.shade700 
-                          : Colors.purple.shade700,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: match.matchType == BadmintonMatchType.singles 
+                          ? Colors.blue.shade100 
+                          : Colors.purple.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      match.matchType.displayName,
+                      style: TextStyle(
+                        color: match.matchType == BadmintonMatchType.singles 
+                            ? Colors.blue.shade700 
+                            : Colors.purple.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
                 if (match.isCompleted)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -145,7 +148,7 @@ class MatchDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Round ${match.currentRound} of 3',
+                  'Round ${match.currentRoundNumber} of 3',
                   style: TextStyle(
                     color: Colors.orange.shade700,
                     fontWeight: FontWeight.bold,
@@ -224,7 +227,7 @@ class MatchDetailScreen extends StatelessWidget {
                       ),
                       if (!match.isCompleted)
                         Text(
-                          'Round ${match.currentRound}',
+                          'Round ${match.currentRoundNumber}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -267,7 +270,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoundHistory(MatchModel match) {
+  Widget _buildRoundHistory(BadmintonMatchModel match) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -372,14 +375,14 @@ class MatchDetailScreen extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildScoreSection(MatchModel match, MatchController controller) {
+  Widget _buildScoreSection(BadmintonMatchModel match, MatchController controller) {
     if (match.isCompleted) {
       return Card(
         elevation: 2,
@@ -428,6 +431,9 @@ class MatchDetailScreen extends StatelessWidget {
       );
     }
 
+    // Check if match is paused
+    final bool isPaused = match.status == BadmintonMatchStatus.paused;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -438,19 +444,50 @@ class MatchDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Update Score',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Update Score',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (isPaused)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.pause_circle, size: 16, color: Colors.orange.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'PAUSED',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
-              'Round ${match.currentRound} - First to 21 points can win the round',
+              isPaused 
+                ? 'Match is paused - Resume to continue scoring'
+                : 'Round ${match.currentRoundNumber} - First to 21 points can win the round',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey.shade600,
+                color: isPaused ? Colors.orange.shade600 : Colors.grey.shade600,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -472,17 +509,17 @@ class MatchDetailScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton(
-                            onPressed: () {
+                            onPressed: isPaused ? null : () {
                               if (match.team1Score > 0) {
                                 controller.updateMatchScore(
-                                  match.id,
+                                  match.matchId,
                                   match.team1Score - 1,
                                   match.team2Score,
                                 );
                               }
                             },
                             icon: const Icon(Icons.remove_circle),
-                            color: Colors.red,
+                            color: isPaused ? Colors.grey : Colors.red,
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -508,15 +545,15 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            onPressed: () {
+                            onPressed: isPaused ? null : () {
                               controller.updateMatchScore(
-                                match.id,
+                                match.matchId,
                                 match.team1Score + 1,
                                 match.team2Score,
                               );
                             },
                             icon: const Icon(Icons.add_circle),
-                            color: Colors.green,
+                            color: isPaused ? Colors.grey : Colors.green,
                           ),
                         ],
                       ),
@@ -538,17 +575,17 @@ class MatchDetailScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton(
-                            onPressed: () {
+                            onPressed: isPaused ? null : () {
                               if (match.team2Score > 0) {
                                 controller.updateMatchScore(
-                                  match.id,
+                                  match.matchId,
                                   match.team1Score,
                                   match.team2Score - 1,
                                 );
                               }
                             },
                             icon: const Icon(Icons.remove_circle),
-                            color: Colors.red,
+                            color: isPaused ? Colors.grey : Colors.red,
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -574,15 +611,15 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            onPressed: () {
+                            onPressed: isPaused ? null : () {
                               controller.updateMatchScore(
-                                match.id,
+                                match.matchId,
                                 match.team1Score,
                                 match.team2Score + 1,
                               );
                             },
                             icon: const Icon(Icons.add_circle),
-                            color: Colors.green,
+                            color: isPaused ? Colors.grey : Colors.green,
                           ),
                         ],
                       ),
@@ -597,7 +634,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchInfo(MatchModel match) {
+  Widget _buildMatchInfo(BadmintonMatchModel match) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -616,11 +653,11 @@ class MatchDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Match ID', match.id),
-            _buildInfoRow('Match Type', match.matchType),
-            _buildInfoRow('Current Round', '${match.currentRound} of 3'),
+            _buildInfoRow('Match ID', match.matchId),
+            _buildInfoRow('Match Type', match.matchType.displayName),
+            _buildInfoRow('Current Round', '${match.currentRoundNumber} of 3'),
             _buildInfoRow('Rounds Won', '${match.team1RoundsWon} - ${match.team2RoundsWon}'),
-            _buildInfoRow('Created', _formatDate(match.createdAt)),
+             _buildInfoRow('Created', _formatDate(match.createdAt)),
             _buildInfoRow('Status', match.isCompleted ? 'Completed' : 'In Progress'),
           ],
         ),
@@ -659,7 +696,117 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCompleteButton(MatchModel match, MatchController controller) {
+  Widget _buildBreakResumeButton(BadmintonMatchModel match, MatchController controller) {
+    final bool isPaused = match.status == BadmintonMatchStatus.paused;
+    
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          if (isPaused) {
+            controller.resumeMatch(match.matchId);
+          } else {
+            _showBreakDialog(match, controller);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isPaused ? Colors.green.shade600 : Colors.orange.shade600,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: Icon(
+          isPaused ? Icons.play_circle : Icons.pause_circle,
+          size: 24,
+        ),
+        label: Text(
+          isPaused ? 'Resume Match' : 'Take a Break',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBreakDialog(BadmintonMatchModel match, MatchController controller) {
+    Get.dialog(
+      AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.pause_circle, color: Colors.orange.shade600),
+            const SizedBox(width: 8),
+            const Text('Take a Break'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Do you want to pause this match?',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Current Score: ${match.team1Score} - ${match.team2Score}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Round ${match.currentRoundNumber} of 3',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'You can resume the match anytime from where you left off.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Get.back();
+              controller.pauseMatch(match.matchId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.pause_circle, size: 20),
+            label: const Text('Pause Match'),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildCompleteButton(BadmintonMatchModel match, MatchController controller) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -685,7 +832,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showCompleteDialog(MatchModel match, MatchController controller) {
+  void _showCompleteDialog(BadmintonMatchModel match, MatchController controller) {
     Get.dialog(
       AlertDialog(
         title: const Text('Complete Match'),
@@ -697,7 +844,7 @@ class MatchDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              controller.completeMatch(match.id);
+              controller.completeMatch(match.matchId);
               Get.back();
             },
             style: ElevatedButton.styleFrom(
@@ -738,7 +885,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  String _getMatchWinner(MatchModel match) {
+  String _getMatchWinner(BadmintonMatchModel match) {
     if (match.winner == 'team1') {
       return match.team1Players.join(' & ');
     } else if (match.winner == 'team2') {

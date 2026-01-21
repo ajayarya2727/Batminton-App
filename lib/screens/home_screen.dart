@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/match_controller.dart';
-import '../models/match_model.dart';
+import '../models/badminton_models.dart';
 import 'match_detail_screen.dart';
 import 'create_match_screen.dart';
 
@@ -60,7 +60,7 @@ class HomeScreen extends StatelessWidget {
         }
 
         // Sort matches by creation time (latest first)
-        final sortedMatches = List<MatchModel>.from(controller.matches);
+        final sortedMatches = List<BadmintonMatchModel>.from(controller.matches);
         sortedMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         return RefreshIndicator(
@@ -82,7 +82,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchCard(MatchModel match) {
+  Widget _buildMatchCard(BadmintonMatchModel match) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -91,7 +91,7 @@ class HomeScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: InkWell(
-          onTap: () => Get.to(() => MatchDetailScreen(matchId: match.id)),
+          onTap: () => Get.to(() => MatchDetailScreen(matchId: match.matchId)),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -107,15 +107,15 @@ class HomeScreen extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: match.matchType == '1v1' 
+                        color: match.matchType == BadmintonMatchType.singles 
                             ? Colors.blue.shade100 
                             : Colors.purple.shade100,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        match.matchType,
+                        match.matchType.displayName,
                         style: TextStyle(
-                          color: match.matchType == '1v1' 
+                          color: match.matchType == BadmintonMatchType.singles 
                               ? Colors.blue.shade700 
                               : Colors.purple.shade700,
                           fontWeight: FontWeight.w600,
@@ -140,6 +140,36 @@ class HomeScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
+                        ),
+                      )
+                    else if (match.status == BadmintonMatchStatus.paused)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.pause_circle,
+                              size: 14,
+                              color: Colors.orange.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Paused',
+                              style: TextStyle(
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
