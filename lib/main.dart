@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'controllers/match_controller.dart';
 import 'screens/home_screen.dart';
+import 'screens/match_detail_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,6 +21,15 @@ class MyApp extends StatelessWidget {
       ),
       home: const MyHomePage(),
       debugShowCheckedModeBanner: false,
+      getPages: [
+        GetPage(
+          name: '/match-detail',
+          page: () {
+            final String matchId = Get.arguments as String;
+            return MatchDetailScreen(matchId: matchId);
+          },
+        ),
+      ],
     );
   }
 }

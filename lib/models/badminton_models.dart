@@ -129,7 +129,7 @@ class BadmintonPlayerModel {
   }) {
     return BadmintonPlayerModel(
       playerId: playerId ?? this.playerId,
-      name: playerName ?? this.name,
+      name: playerName ?? name,
     );
   }
 
@@ -238,6 +238,8 @@ class BadmintonRoundModel {
   final bool milestone21Reached;
   final DateTime? startedAt;
   final DateTime? completedAt;
+  final String? currentServer; // 'team1' or 'team2'
+  final String? initialServer; // Who started serving this round
 
   const BadmintonRoundModel({
     required this.roundNumber,
@@ -248,6 +250,8 @@ class BadmintonRoundModel {
     this.milestone21Reached = false,
     this.startedAt,
     this.completedAt,
+    this.currentServer,
+    this.initialServer,
   });
 
   // Computed properties
@@ -268,6 +272,8 @@ class BadmintonRoundModel {
       'milestone21Reached': milestone21Reached,
       'startedAt': startedAt?.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
+      'currentServer': currentServer,
+      'initialServer': initialServer,
     };
   }
 
@@ -286,6 +292,8 @@ class BadmintonRoundModel {
       completedAt: json['completedAt'] != null 
           ? DateTime.parse(json['completedAt'] as String)
           : null,
+      currentServer: json['currentServer'] as String?,
+      initialServer: json['initialServer'] as String?,
     );
   }
 
@@ -299,6 +307,8 @@ class BadmintonRoundModel {
     bool? milestone21Reached,
     DateTime? startedAt,
     DateTime? completedAt,
+    String? currentServer,
+    String? initialServer,
   }) {
     return BadmintonRoundModel(
       roundNumber: roundNumber ?? this.roundNumber,
@@ -309,11 +319,13 @@ class BadmintonRoundModel {
       milestone21Reached: milestone21Reached ?? this.milestone21Reached,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
+      currentServer: currentServer ?? this.currentServer,
+      initialServer: initialServer ?? this.initialServer,
     );
   }
 
   // Helper methods
-  BadmintonRoundModel start() {
+  BadmintonRoundModel start({String? initialServer}) {
     return copyWith(
       status: BadmintonRoundStatus.inProgress,
       startedAt: DateTime.now(),
@@ -337,6 +349,10 @@ class BadmintonRoundModel {
 
   BadmintonRoundModel markMilestone21Reached() {
     return copyWith(milestone21Reached: true);
+  }
+
+  BadmintonRoundModel updateServer(String newServer) {
+    return copyWith(currentServer: newServer);
   }
 
   @override
@@ -400,6 +416,9 @@ class BadmintonMatchModel {
   
   // Check if 21 milestone reached in current round
   bool get milestone21Reached => currentRound?.milestone21Reached ?? false;
+  
+  // Get current server from current round
+  String? get currentServer => currentRound?.currentServer;
   
   // Legacy compatibility properties for existing code
   String get id => matchId;
@@ -483,13 +502,15 @@ class BadmintonMatchModel {
   }
 
   // Match management methods
-  BadmintonMatchModel initializeFirstRound() {
+  BadmintonMatchModel initializeFirstRound({String? initialServer}) {
     if (rounds.isNotEmpty) return this;
     
     final firstRound = BadmintonRoundModel(
       roundNumber: 1,
       status: BadmintonRoundStatus.inProgress,
       startedAt: DateTime.now(),
+      initialServer: initialServer,
+      currentServer: initialServer,
     );
     
     return copyWith(
@@ -502,6 +523,48 @@ class BadmintonMatchModel {
     if (currentRound == null) return this;
     
     final updatedRound = currentRound!.updateScores(team1Score, team2Score);
+    final updatedRounds = List<BadmintonRoundModel>.from(rounds);
+    updatedRounds[currentRoundNumber - 1] = updatedRound;
+    
+    return copyWith(rounds: updatedRounds);
+  }
+  
+  // Calculate who should serve based on point winner (actual badminton rules)
+  String _calculateCurrentServer(int team1Score, int team2Score, String? initialServer, int prevTeam1Score, int prevTeam2Score) {
+    if (initialServer == null) return 'team1'; // Default fallback
+    
+    // If this is the first point (0-0), initial server serves
+    if (team1Score == 0 && team2Score == 0) {
+      return initialServer;
+    }
+    
+    // Check who scored the last point
+    if (team1Score > prevTeam1Score) {
+      // Team 1 scored, so Team 1 serves next
+      return 'team1';
+    } else if (team2Score > prevTeam2Score) {
+      // Team 2 scored, so Team 2 serves next
+      return 'team2';
+    }
+    
+    // If no score change, keep current server (fallback)
+    return currentRound?.currentServer ?? initialServer;
+  }
+  
+  BadmintonMatchModel updateCurrentRoundScoresWithService(int team1Score, int team2Score, {int? prevTeam1Score, int? prevTeam2Score}) {
+    if (currentRound == null) return this;
+    
+    // Use previous scores or current scores as fallback
+    final prevT1Score = prevTeam1Score ?? currentRound!.team1Score;
+    final prevT2Score = prevTeam2Score ?? currentRound!.team2Score;
+    
+    // Calculate who should be serving based on who won the last point
+    final newServer = _calculateCurrentServer(team1Score, team2Score, currentRound!.initialServer, prevT1Score, prevT2Score);
+    
+    final updatedRound = currentRound!
+        .updateScores(team1Score, team2Score)
+        .updateServer(newServer);
+    
     final updatedRounds = List<BadmintonRoundModel>.from(rounds);
     updatedRounds[currentRoundNumber - 1] = updatedRound;
     
@@ -541,10 +604,18 @@ class BadmintonMatchModel {
     if (isMatchComplete || currentRoundNumber >= 3) return this;
     
     final nextRoundNumber = currentRoundNumber + 1;
+    
+    // Determine who should serve first in next round
+    // In badminton, the winner of previous round serves first in next round
+    final previousRound = rounds.isNotEmpty ? rounds.last : null;
+    final nextRoundServer = previousRound?.winnerId;
+    
     final nextRound = BadmintonRoundModel(
       roundNumber: nextRoundNumber,
       status: BadmintonRoundStatus.inProgress,
       startedAt: DateTime.now(),
+      initialServer: nextRoundServer,
+      currentServer: nextRoundServer,
     );
     
     final updatedRounds = List<BadmintonRoundModel>.from(rounds)..add(nextRound);

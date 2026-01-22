@@ -77,35 +77,148 @@ class MatchController extends GetxController {
     }
   }
 
-  // Add new match
+  // Add new match with service selection
   Future<void> addMatch(BadmintonMatchModel match) async {
     matches.add(match);
     await StorageService.saveMatch(match);
     Get.snackbar('Success', 'Batminton Match created successfully!');
   }
 
-  // Update match score - Smart milestone logic with multi-round support
+  // Show service selection dialog when match starts
+  void showServiceSelectionDialog(BadmintonMatchModel match) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('🏸 Who will serve first?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select which team will serve first in Round 1:',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            // Team 1 option
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  initializeMatchWithService(match.matchId, 'team1');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Team 1',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      match.team1Players.join(' & '),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Team 2 option
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                  initializeMatchWithService(match.matchId, 'team2');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Team 2',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      match.team2Players.join(' & '),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // Initialize match with selected server (public method)
+  Future<void> initializeMatchWithService(String matchId, String initialServer) async {
+    final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex != -1) {
+      final match = matches[matchIndex];
+      
+      // Initialize first round with selected server
+      matches[matchIndex] = match.initializeFirstRound(initialServer: initialServer);
+      
+      await StorageService.saveMatch(matches[matchIndex]);
+      
+      final serverTeamName = initialServer == 'team1' 
+          ? match.team1Players.join(' & ')
+          : match.team2Players.join(' & ');
+      
+      Get.snackbar(
+        'Service Set!', 
+        '$serverTeamName will serve first',
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade700,
+        icon: Icon(Icons.sports_tennis, color: Colors.green.shade700),
+      );
+    }
+  }
+
+  // Update match score - Smart milestone logic with multi-round support and service tracking
   Future<void> updateMatchScore(String matchId, int team1Score, int team2Score) async {
     final matchIndex = matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex != -1) {
       final match = matches[matchIndex];
       
-      // Don't allow score updates if match is completed
-      if (match.isCompleted) return;
+      // Don't allow score updates if match is completed or paused
+      if (match.isCompleted || match.status == BadmintonMatchStatus.paused) return;
       
-      // Get previous scores to check milestones
-      final prevTeam1Score = match.team1Score;
-      final prevTeam2Score = match.team2Score;
-      
-      // Check if someone just reached 30 - complete current round
-      if (team1Score == 30 || team2Score == 30) {
-        final roundWinner = team1Score == 30 ? 'team1' : 'team2';
-        await _completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
+      // If match hasn't started yet (no rounds), show service selection
+      if (match.rounds.isEmpty) {
+        showServiceSelectionDialog(match);
         return;
       }
       
-      // Update current round scores
-      matches[matchIndex] = match.updateCurrentRoundScores(team1Score, team2Score);
+      // Get previous scores to check milestones and service changes
+      final prevTeam1Score = match.team1Score;
+      final prevTeam2Score = match.team2Score;
+      
+      // First update current round scores with service tracking (point winner serves next)
+      matches[matchIndex] = match.updateCurrentRoundScoresWithService(
+        team1Score, 
+        team2Score, 
+        prevTeam1Score: prevTeam1Score, 
+        prevTeam2Score: prevTeam2Score
+      );
+      
+      // Check if someone JUST reached 30 - complete current round AFTER updating scores
+      if (team1Score == 30 || team2Score == 30) {
+        final roundWinner = team1Score == 30 ? 'team1' : 'team2';
+        await StorageService.saveMatch(matches[matchIndex]); // Save first with 30 points
+        await _completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
+        return;
+      }
       
       // Check if someone JUST reached 21 AND 21 milestone hasn't been reached before
       bool showPopup = false;

@@ -309,16 +309,6 @@ class CreateMatchScreen extends StatelessWidget {
     }
 
     try {
-      // Show creating feedback
-      Get.snackbar(
-        'Creating Match',
-        'Setting up your badminton match...',
-        backgroundColor: Colors.blue.shade100,
-        colorText: Colors.blue.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 2),
-      );
-
       // Create match
       final matchId = DateTime.now().millisecondsSinceEpoch.toString();
       
@@ -349,25 +339,13 @@ class CreateMatchScreen extends StatelessWidget {
         team1: team1,
         team2: team2,
         createdAt: DateTime.now(),
-      ).initializeFirstRound();
+      );
 
-      // Add small delay for better UX
-      await Future.delayed(const Duration(milliseconds: 500));
-
+      // Add match to controller first
       await controller.addMatch(match);
       
-      // Success feedback
-      Get.snackbar(
-        'Success! 🏸',
-        'Match created successfully! Ready to play.',
-        backgroundColor: Colors.green.shade100,
-        colorText: Colors.green.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
-      
-      // Go back to previous screen
-      Get.back();
+      // Show service selection dialog and navigate to match detail
+      _showServiceSelectionAndNavigate(controller, match);
       
     } catch (e) {
       Get.snackbar(
@@ -379,5 +357,89 @@ class CreateMatchScreen extends StatelessWidget {
         duration: const Duration(seconds: 3),
       );
     }
+  }
+
+  void _showServiceSelectionAndNavigate(MatchController controller, BadmintonMatchModel match) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('🏸 Who will serve first?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select which team will serve first in Round 1:',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            // Team 1 option
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back(); // Close dialog
+                  _initializeMatchAndNavigate(controller, match.matchId, 'team1');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Team 1',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      match.team1Players.join(' & '),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Team 2 option
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back(); // Close dialog
+                  _initializeMatchAndNavigate(controller, match.matchId, 'team2');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Team 2',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      match.team2Players.join(' & '),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> _initializeMatchAndNavigate(MatchController controller, String matchId, String initialServer) async {
+    // Initialize match with selected server
+    await controller.initializeMatchWithService(matchId, initialServer);
+    
+    // Navigate to match detail screen
+    Get.back(); // Close create match screen
+    Get.toNamed('/match-detail', arguments: matchId);
   }
 }

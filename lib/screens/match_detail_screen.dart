@@ -194,13 +194,34 @@ class MatchDetailScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       ...match.team1Players.map((player) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          player,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              player,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            // Service indicator for Team 1
+                            if (match.currentServer == 'team1') ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.sports_tennis,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       )),
                     ],
@@ -250,13 +271,34 @@ class MatchDetailScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       ...match.team2Players.map((player) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          player,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              player,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            // Service indicator for Team 2
+                            if (match.currentServer == 'team2') ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade600,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.sports_tennis,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       )),
                     ],
