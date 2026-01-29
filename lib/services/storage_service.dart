@@ -27,8 +27,8 @@ class StorageService {
       final matchJson = json.encode(match.toJson());
       await matchFile.writeAsString(matchJson);
       
-      // DEMO: Print JSON to console for sir's evaluation
-      _printMatchJsonToConsole(match, matchFile.path, matchJson);
+      // AUTOMATIC PRINTING: Print JSON when match is saved (score changes)
+      await printMatchById(match.matchId);
       
     } catch (e) {
       throw Exception('Failed to save match ${match.matchId}: $e');
@@ -157,77 +157,385 @@ class StorageService {
       final match = await loadMatch(matchId);
       
       if (match == null) {
-        print('');
-        print('================================');
-        print('MATCH NOT FOUND');
-        print('================================');
-        print('Match ID: $matchId');
-        print('Status: No match found with this ID');
-        print('================================');
-        print('');
+        print('MATCH NOT FOUND: $matchId');
+        return;
+      }
+      
+      // Build complete match result object in the exact order as string format
+      final matchResult = <String, dynamic>{
+        // Match Info Section
+        'matchInfo': <String, dynamic>{
+          'matchId': match.matchId,
+          'matchType': match.matchType.displayName,
+          'matchStatus': match.status.displayName,
+          'currentRound': match.currentRoundNumber,
+          'totalRounds': 3,
+        },
+        
+        // Team 1 Section
+        'team1': <String, dynamic>{
+          'teamId': match.team1.teamId,
+          'teamName': match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
+          'teamLogo': match.team1.teamLogo,
+          'currentRoundScore': '${match.team1Score}/21 points',
+          'roundsWon': match.team1RoundsWon,
+          'players': match.team1.players.asMap().entries.map((entry) {
+            final index = entry.key;
+            final p = entry.value;
+            return <String, dynamic>{
+              'name': p.name,
+              'playerId': p.playerId,
+              'pointsInThisRound': p.currentRoundScore,
+              'totalMatchPoints': p.totalMatchScore,
+              'isCurrentServer': p.isCurrentServer,
+            };
+          }).toList(),
+        },
+        
+        // Team 2 Section
+        'team2': <String, dynamic>{
+          'teamId': match.team2.teamId,
+          'teamName': match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2',
+          'teamLogo': match.team2.teamLogo,
+          'currentRoundScore': '${match.team2Score}/21 points',
+          'roundsWon': match.team2RoundsWon,
+          'players': match.team2.players.asMap().entries.map((entry) {
+            final index = entry.key;
+            final p = entry.value;
+            return <String, dynamic>{
+              'name': p.name,
+              'playerId': p.playerId,
+              'pointsInThisRound': p.currentRoundScore,
+              'totalMatchPoints': p.totalMatchScore,
+              'isCurrentServer': p.isCurrentServer,
+            };
+          }).toList(),
+        },
+      };
+      
+      // Add match result data if rounds exist
+      if (match.rounds.isNotEmpty) {
+        final matchResultData = <String, dynamic>{};
+        
+        // Overall match result
+        if (match.isCompleted) {
+          final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+          final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+          final matchWinnerName = match.matchWinner == 'team1' ? team1Name : 
+                                 match.matchWinner == 'team2' ? team2Name : 'Draw';
+          matchResultData['matchWinner'] = matchWinnerName;
+          matchResultData['finalMatchScore'] = '${match.team1RoundsWon} - ${match.team2RoundsWon} (Rounds Won)';
+          matchResultData['matchStatus'] = 'COMPLETED';
+        } else {
+          final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+          final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+          matchResultData['roundsWonByTeams'] = <String, dynamic>{
+            team1Name: '${match.team1RoundsWon} rounds won',
+            team2Name: '${match.team2RoundsWon} rounds won',
+          };
+          matchResultData['matchStatus'] = 'IN PROGRESS';
+          matchResultData['currentRound'] = '${match.currentRoundNumber} of 3';
+        }
+        
+        // Round by round results
+        matchResultData['roundByRoundResults'] = match.rounds.map((round) {
+          final status = round.isCompleted ? 'COMPLETED' : 'IN PROGRESS';
+          final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+          final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+          final winner = round.winnerId == 'team1' ? team1Name : 
+                        round.winnerId == 'team2' ? team2Name : 'Ongoing';
+          
+          final roundResult = <String, dynamic>{
+            'roundNumber': round.roundNumber,
+            'score': '${round.team1Score} - ${round.team2Score}',
+            'status': status,
+          };
+          
+          if (round.isCompleted) {
+            roundResult['roundWinner'] = winner;
+            roundResult['duration'] = _calculateRoundDuration(round);
+            roundResult['totalPointsPlayed'] = round.team1Score + round.team2Score;
+            roundResult['playerContributions'] = <String, dynamic>{
+              team1Name: match.team1.players.map((player) => <String, dynamic>{
+                'name': player.name,
+                'points': round.playerScores[player.playerId] ?? 0,
+              }).toList(),
+              team2Name: match.team2.players.map((player) => <String, dynamic>{
+                'name': player.name,
+                'points': round.playerScores[player.playerId] ?? 0,
+              }).toList(),
+            };
+          } else {
+            roundResult['currentServer'] = _getPlayerNameById(match, round.currentServer ?? '');
+            roundResult['pointsPlayedSoFar'] = round.team1Score + round.team2Score;
+          }
+          
+          return roundResult;
+        }).toList();
+        
+        // Match statistics
+        final totalPointsTeam1 = match.rounds.fold<int>(0, (sum, round) => sum + round.team1Score);
+        final totalPointsTeam2 = match.rounds.fold<int>(0, (sum, round) => sum + round.team2Score);
+        final totalPointsPlayed = totalPointsTeam1 + totalPointsTeam2;
+        
+        final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+        final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+        
+        matchResultData['matchStatistics'] = <String, dynamic>{
+          'totalPointsPlayed': totalPointsPlayed,
+          '${team1Name}TotalPoints': totalPointsTeam1,
+          '${team2Name}TotalPoints': totalPointsTeam2,
+        };
+        
+        if (totalPointsPlayed > 0) {
+          final team1Percentage = (totalPointsTeam1 / totalPointsPlayed * 100).toStringAsFixed(1);
+          final team2Percentage = (totalPointsTeam2 / totalPointsPlayed * 100).toStringAsFixed(1);
+          matchResultData['matchStatistics']['${team1Name}PointPercentage'] = '$team1Percentage%';
+          matchResultData['matchStatistics']['${team2Name}PointPercentage'] = '$team2Percentage%';
+        }
+        
+        // Individual player statistics
+        matchResultData['individualPlayerStatistics'] = <String, dynamic>{
+          'team1Players': match.team1.players.map((player) {
+            return <String, dynamic>{
+              'playerId': player.playerId,
+              'name': player.name,
+              'currentRoundPoints': player.currentRoundScore,
+              'totalMatchPoints': player.totalMatchScore,
+              'currentlyServing': player.isCurrentServer,
+            };
+          }).toList(),
+          'team2Players': match.team2.players.map((player) {
+            return <String, dynamic>{
+              'playerId': player.playerId,
+              'name': player.name,
+              'currentRoundPoints': player.currentRoundScore,
+              'totalMatchPoints': player.totalMatchScore,
+              'currentlyServing': player.isCurrentServer,
+            };
+          }).toList(),
+        };
+        
+        matchResult['matchResult'] = matchResultData;
+      } else {
+        matchResult['matchResult'] = <String, dynamic>{'status': 'No rounds played yet'};
+      }
+      
+      // Print complete JSON object in chunks to avoid truncation
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final String prettyJson = encoder.convert(matchResult);
+      
+      // Debug information
+      print('=== MATCH JSON DEBUG INFO ===');
+      print('Total JSON length: ${prettyJson.length} characters');
+      print('Team1 players count: ${match.team1.players.length}');
+      print('Team2 players count: ${match.team2.players.length}');
+      print('Rounds count: ${match.rounds.length}');
+      print('=== COMPLETE MATCH JSON START ===');
+      
+      // Print in smaller chunks to avoid console truncation, but break at line boundaries
+      const int chunkSize = 1000;
+      final lines = prettyJson.split('\n');
+      String currentChunk = '';
+      
+      for (final line in lines) {
+        // If adding this line would exceed chunk size, print current chunk and start new one
+        if (currentChunk.length + line.length + 1 > chunkSize && currentChunk.isNotEmpty) {
+          print(currentChunk);
+          currentChunk = line;
+        } else {
+          if (currentChunk.isNotEmpty) {
+            currentChunk += '\n$line';
+          } else {
+            currentChunk = line;
+          }
+        }
+      }
+      
+      // Print any remaining content
+      if (currentChunk.isNotEmpty) {
+        print(currentChunk);
+      }
+      
+      print('=== COMPLETE MATCH JSON END ===');
+      
+    } catch (e) {
+      print('ERROR: $e');
+    }
+  }
+
+  // Helper method to build match result object
+  static Map<String, dynamic> _buildMatchResult(BadmintonMatchModel match) {
+    final result = <String, dynamic>{};
+    
+    if (match.rounds.isEmpty) {
+      return {'status': 'No rounds played yet'};
+    }
+    
+    // Overall match result
+    if (match.isCompleted) {
+      final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+      final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+      final matchWinnerName = match.matchWinner == 'team1' ? team1Name : 
+                             match.matchWinner == 'team2' ? team2Name : 'Draw';
+      result['matchWinner'] = matchWinnerName;
+      result['finalMatchScore'] = '${match.team1RoundsWon} - ${match.team2RoundsWon}';
+      result['matchStatus'] = 'COMPLETED';
+    } else {
+      result['currentMatchScore'] = '${match.team1RoundsWon} - ${match.team2RoundsWon}';
+      result['matchStatus'] = 'IN PROGRESS';
+      result['currentRound'] = '${match.currentRoundNumber} of 3';
+    }
+    
+    // Round by round results
+    result['roundByRoundResults'] = match.rounds.map((round) {
+      final status = round.isCompleted ? 'COMPLETED' : 'IN PROGRESS';
+      final team1Name = match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1';
+      final team2Name = match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2';
+      final winner = round.winnerId == 'team1' ? team1Name : 
+                    round.winnerId == 'team2' ? team2Name : 'Ongoing';
+      
+      final roundResult = {
+        'roundNumber': round.roundNumber,
+        'score': '${round.team1Score} - ${round.team2Score}',
+        'status': status,
+      };
+      
+      if (round.isCompleted) {
+        roundResult['roundWinner'] = winner;
+        roundResult['duration'] = _calculateRoundDuration(round);
+        roundResult['totalPointsPlayed'] = round.team1Score + round.team2Score;
+        roundResult['playerContributions'] = {
+          team1Name: match.team1.players.map((player) => {
+            'name': player.name,
+            'points': round.playerScores[player.playerId] ?? 0,
+          }).toList(),
+          team2Name: match.team2.players.map((player) => {
+            'name': player.name,
+            'points': round.playerScores[player.playerId] ?? 0,
+          }).toList(),
+        };
+      } else {
+        roundResult['currentServer'] = _getPlayerNameById(match, round.currentServer ?? '');
+        roundResult['pointsPlayedSoFar'] = round.team1Score + round.team2Score;
+      }
+      
+      return roundResult;
+    }).toList();
+    
+    // Match statistics
+    final totalPointsTeam1 = match.rounds.fold<int>(0, (sum, round) => sum + round.team1Score);
+    final totalPointsTeam2 = match.rounds.fold<int>(0, (sum, round) => sum + round.team2Score);
+    final totalPointsPlayed = totalPointsTeam1 + totalPointsTeam2;
+    
+    result['matchStatistics'] = {
+      'totalPointsPlayed': totalPointsPlayed,
+      'team1TotalPoints': totalPointsTeam1,
+      'team2TotalPoints': totalPointsTeam2,
+    };
+    
+    if (totalPointsPlayed > 0) {
+      final team1Percentage = (totalPointsTeam1 / totalPointsPlayed * 100).toStringAsFixed(1);
+      final team2Percentage = (totalPointsTeam2 / totalPointsPlayed * 100).toStringAsFixed(1);
+      result['matchStatistics']['team1PointPercentage'] = '$team1Percentage%';
+      result['matchStatistics']['team2PointPercentage'] = '$team2Percentage%';
+    }
+    
+    // Individual player statistics
+    result['individualPlayerStatistics'] = {
+      'team1Players': match.team1.players.map((player) {
+        final totalPoints = match.rounds.fold<int>(0, (sum, round) => 
+          sum + (round.playerScores[player.playerId] ?? 0));
+        return {
+          'playerId': player.playerId,
+          'name': player.name,
+          'totalPoints': totalPoints,
+          'currentRoundPoints': player.currentRoundScore,
+          'totalMatchPoints': player.totalMatchScore,
+          'currentlyServing': player.isCurrentServer,
+        };
+      }).toList(),
+      'team2Players': match.team2.players.map((player) {
+        final totalPoints = match.rounds.fold<int>(0, (sum, round) => 
+          sum + (round.playerScores[player.playerId] ?? 0));
+        return {
+          'playerId': player.playerId,
+          'name': player.name,
+          'totalPoints': totalPoints,
+          'currentRoundPoints': player.currentRoundScore,
+          'totalMatchPoints': player.totalMatchScore,
+          'currentlyServing': player.isCurrentServer,
+        };
+      }).toList(),
+    };
+    
+    return result;
+  }
+
+  // Helper method to get player name by ID
+  static String _getPlayerNameById(BadmintonMatchModel match, String playerId) {
+    for (final player in [...match.team1.players, ...match.team2.players]) {
+      if (player.playerId == playerId) {
+        return player.name;
+      }
+    }
+    return 'Unknown Player';
+  }
+
+  // Helper method to calculate round duration
+  static String _calculateRoundDuration(BadmintonRoundModel round) {
+    if (round.startedAt == null) return 'Unknown';
+    
+    final endTime = round.completedAt ?? DateTime.now();
+    final duration = endTime.difference(round.startedAt!);
+    
+    if (duration.inMinutes < 1) {
+      return '${duration.inSeconds} seconds';
+    } else if (duration.inHours < 1) {
+      return '${duration.inMinutes} minutes ${duration.inSeconds % 60} seconds';
+    } else {
+      return '${duration.inHours} hours ${duration.inMinutes % 60} minutes';
+    }
+  }
+
+
+
+  // DEMO: Save match JSON to a readable file for debugging
+  static Future<void> saveMatchJsonToFile(String matchId) async {
+    try {
+      final match = await loadMatch(matchId);
+      
+      if (match == null) {
+        print('Match not found: $matchId');
         return;
       }
       
       final matchesDir = await _getMatchesDirectory();
-      final filePath = '${matchesDir.path}/$matchId.json';
-      final jsonString = json.encode(match.toJson());
+      final debugFile = File('${matchesDir.path}/${matchId}_debug.json');
       
-      _printMatchJsonToConsole(match, filePath, jsonString, isManualPrint: true);
-      
-    } catch (e) {
-      print('');
-      print('================================');
-      print('ERROR LOADING MATCH');
-      print('================================');
-      print('Match ID: $matchId');
-      print('Error: $e');
-      print('================================');
-      print('');
-    }
-  }
-  // DEMO: Print match JSON to console for sir's evaluation
-  static void _printMatchJsonToConsole(BadmintonMatchModel match, String filePath, String jsonString, {bool isManualPrint = false}) {
-    try {
-      // Convert JSON string to Map for pretty printing
-      final Map<String, dynamic> jsonMap = json.decode(jsonString);
-      
-      // Create pretty formatted JSON with proper indentation
+      // Create pretty formatted JSON
+      final Map<String, dynamic> jsonMap = match.toJson();
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
       final String prettyJson = encoder.convert(jsonMap);
       
-      // Print formatted output for demo
+      // Save to debug file
+      await debugFile.writeAsString(prettyJson);
+      
       print('');
       print('================================');
-      if (isManualPrint) {
-        print('MATCH JSON RETRIEVED BY ID');
-      } else {
-        print('MATCH JSON SAVED');
-      }
+      print('MATCH JSON SAVED TO DEBUG FILE');
       print('================================');
       print('Match ID: ${match.matchId}');
-      print('Match Type: ${match.matchType.displayName}');
-      print('Status: ${match.status.displayName}');
-      print('File Path: $filePath');
-      print('JSON Content:');
-      print(prettyJson);
+      print('Debug File: ${debugFile.path}');
+      print('File size: ${prettyJson.length} characters');
+      print('You can view the complete JSON in the debug file');
       print('================================');
       print('');
       
     } catch (e) {
-      // Fallback to simple print if pretty formatting fails
-      print('');
-      print('================================');
-      if (isManualPrint) {
-        print('MATCH JSON RETRIEVED BY ID');
-      } else {
-        print('MATCH JSON SAVED');
-      }
-      print('================================');
-      print('Match ID: ${match.matchId}');
-      print('File Path: $filePath');
-      print('JSON Content: $jsonString');
-      print('================================');
-      print('');
+      print('Error saving debug JSON: $e');
     }
   }
+
+
 }

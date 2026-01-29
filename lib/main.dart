@@ -23,6 +23,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       getPages: [
         GetPage(
+          name: '/',
+          page: () => const MyHomePage(),
+        ),
+        GetPage(
           name: '/match-detail',
           page: () {
             final String matchId = Get.arguments as String;
