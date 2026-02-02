@@ -16,6 +16,7 @@ class MainScreen extends StatelessWidget {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button
       ),
       
       // Main content area

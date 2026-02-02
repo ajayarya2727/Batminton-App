@@ -5,7 +5,7 @@ import '../screens/create_match_screen.dart';  // ← Existing match creation
 import 'create_team_screen.dart';              // ← New team creation
 import 'create_tournament_screen.dart';        // ← New tournament creation  
 import 'resume_matches_screen.dart';           // ← New resume matches
-import '../screens/home_screen.dart';          // ← Existing matches list
+import '../screens/matches_list_screen.dart';     // ← Matches list screen
 
 // Individual button widget
 class MenuButton extends StatelessWidget {
@@ -122,7 +122,7 @@ class HorizontalMenu extends StatelessWidget {
                   child: MenuButton(
                     title: 'MY MATCH',
                     color: Colors.orange.shade600,
-                    onTap: () => Get.to(() => const HomeScreen()),
+                    onTap: () => Get.to(() => const MatchesListScreen()),
                   ),
                 ),
               ],

@@ -24,8 +24,8 @@ class MatchDetailScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate directly to home screen
-            Get.offAllNamed('/');
+            // Go back to previous screen (Resume Match screen)
+            Get.back();
           },
         ),
         actions: [

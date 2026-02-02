@@ -5,8 +5,8 @@ import '../models/badminton_models.dart';
 import 'match_detail_screen.dart';
 import 'create_match_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class MatchesListScreen extends StatelessWidget {
+  const MatchesListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
