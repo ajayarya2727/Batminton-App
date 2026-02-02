@@ -500,6 +500,22 @@ class StorageService {
 
 
 
+  // DEMO: Print exact file path for manual editing
+  static Future<void> printFilePath() async {
+    try {
+      final matchesDir = await _getMatchesDirectory();
+      print('');
+      print('=== JSON FILES LOCATION ===');
+      print('Matches folder path: ${matchesDir.path}');
+      print('Individual match files: [matchId].json');
+      print('Example: ${matchesDir.path}/match_123.json');
+      print('=========================');
+      print('');
+    } catch (e) {
+      print('Error getting path: $e');
+    }
+  }
+
   // DEMO: Save match JSON to a readable file for debugging
   static Future<void> saveMatchJsonToFile(String matchId) async {
     try {

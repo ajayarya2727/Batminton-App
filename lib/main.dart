@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'controllers/match_controller.dart';
-import 'screens/home_screen.dart';
+import 'home_screen_options/main_screen.dart';  // ← Main buttons screen
 import 'screens/match_detail_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MyApp());  // ← App start point
 }
 
 class MyApp extends StatelessWidget {
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const MyHomePage(),
+      home: const MyHomePage(),  // ← First screen to load
       debugShowCheckedModeBanner: false,
       getPages: [
         GetPage(
@@ -43,9 +43,10 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize the controller
+    // Initialize match controller for app
     Get.put(MatchController());
     
-    return const HomeScreen();
+    // Load main screen with buttons
+    return const MainScreen();  // ← Goes to home_screen_options/main_screen.dart
   }
 }
