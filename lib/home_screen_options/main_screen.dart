@@ -20,13 +20,14 @@ class MainScreen extends StatelessWidget {
       ),
       
       // Main content area
-      body: const Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(height: 120),  // Space from top
-          HorizontalMenu(),       // ← 5 swipeable buttons
-          SizedBox(height: 30),   // Space at bottom
-        ],
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            const HorizontalMenu(),
+          ],
+        ),
       ),
     );
   }

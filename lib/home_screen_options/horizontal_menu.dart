@@ -24,10 +24,10 @@ class MenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,  // Handle button tap
-      child:  Container(
-          height: 60,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical:8),
+      child: Container(
+        height: 70, // Fixed height for all buttons
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(16),
@@ -35,21 +35,21 @@ class MenuButton extends StatelessWidget {
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 8,
-                offset: const Offset(0, 4),
+                // offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Center(
-            child: Text(overflow: TextOverflow.ellipsis,maxLines: 2,
-            textAlign:TextAlign.center,
+            child: Text(
               title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                
               ),
-            
             ),
           ),
         ),
@@ -65,8 +65,8 @@ class HorizontalMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const SizedBox(height: 40), // Add space to push buttons down
         Row(  
-        // Allows left/right swiping between buttons
             children: [
               // Button 1: Create Match (Green)
               Expanded(
@@ -99,36 +99,62 @@ class HorizontalMenu extends StatelessWidget {
               
             ],
           ),
-          SizedBox(
-            height: 10,
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Row(
-              children: [
-                //Button 4:Create Team
-                Expanded(
-                  flex: 1,
-                  child: MenuButton(
-                    title: 'CREATE TEAM',
-                    color: Colors.blue.shade600,
-                    onTap: () => Get.to(() => const CreateTeamScreen()),
-                  ),
+          const SizedBox(height: 16),
+           Column(
+             children: [
+               Row(
+                  children: [
+                    //Button 4:Create Team
+                    Expanded(
+                      flex: 1,
+                      child: MenuButton(
+                        title: 'CREATE TEAM',
+                        color: Colors.blue.shade600,
+                        onTap: () => Get.to(() => const CreateTeamScreen()),
+                      ),
+                    ),
+                
+                    // Button 5: My Match (Orange)
+                    Expanded(
+                      flex: 1,
+                      child: MenuButton(
+                        title: 'MY MATCH',
+                        color: Colors.orange.shade600,
+                        onTap: () => Get.to(() => const MatchesListScreen()),
+                      ),
+                    ),
+               
+                    Expanded(
+                      flex: 1,
+                      child: MenuButton(
+                        title: 'MY MATCH',
+                        color: Colors.orange.shade600,
+                        onTap: () => Get.to(() => const MatchesListScreen()),
+                      ),
+                    ),
+                  ],
+                
                 ),
-            
-                // Button 5: My Match (Orange)
-                Expanded(
-                  flex: 1,
-                  child: MenuButton(
-                    title: 'MY MATCH',
-                    color: Colors.orange.shade600,
-                    onTap: () => Get.to(() => const MatchesListScreen()),
-                  ),
-                ),
-              ],
-            
-            ),
-          )
+             ],
+           ),
+           
+           // Add "Badminton Matches" text below buttons
+           const SizedBox(height: 40),
+           Container(
+             padding: const EdgeInsets.symmetric(horizontal: 20),
+             child: Text(
+               'Badminton Matches',
+               style: TextStyle(
+                 fontSize: 24,
+                 fontWeight: FontWeight.bold,
+                 color: Colors.green.shade700,
+               ),
+               textAlign: TextAlign.center,
+             ),
+           ),
+           Text('ajay'),
+          // Image.asset('name'),
+          
       ],
     );
   }

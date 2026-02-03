@@ -35,7 +35,7 @@ class CreateTeamScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             SizedBox(
-              height: 60,
+              height: 80,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: controller.availableLogos.length,
@@ -65,7 +65,7 @@ class CreateTeamScreen extends StatelessWidget {
                           style: const TextStyle(fontSize: 24),
                         ),
                       ),
-                    ),
+                  ),
                   ));
                 },
               ),
@@ -107,7 +107,7 @@ class CreateTeamScreen extends StatelessWidget {
             
             // Player 1
             TextField(
-              controller: controller.player1Controller,
+              controller: controller.player1NameController,
               decoration: InputDecoration(
                 hintText: 'Player 1 name',
                 border: OutlineInputBorder(
@@ -120,7 +120,7 @@ class CreateTeamScreen extends StatelessWidget {
             
             // Player 2
             TextField(
-              controller: controller.player2Controller,
+              controller: controller.player2NameController,
               decoration: InputDecoration(
                 hintText: 'Player 2 name (optional for singles)',
                 border: OutlineInputBorder(

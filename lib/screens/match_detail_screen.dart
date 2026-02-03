@@ -28,47 +28,7 @@ class MatchDetailScreen extends StatelessWidget {
             Get.back();
           },
         ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') {
-                _showDeleteDialog(controller);
-              } else if (value == 'print_json') {
-                controller.printCompleteMatchJson(matchId);
-                Get.snackbar(
-                  'JSON Printed', 
-                  'Complete match JSON printed to console and saved to debug file',
-                  backgroundColor: Colors.blue.shade100,
-                  colorText: Colors.blue.shade700,
-                  icon: Icon(Icons.code, color: Colors.blue.shade700),
-                  duration: Duration(seconds: 4),
-                );
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'print_json',
-                child: Row(
-                  children: [
-                    Icon(Icons.code, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Print JSON'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Match'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+
       ),
       body: Obx(() {
         final match = controller.getMatchById(matchId);
@@ -1126,32 +1086,6 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showDeleteDialog(MatchController controller) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Delete Match'),
-        content: const Text('Are you sure you want to delete this match? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              controller.deleteMatch(matchId);
-              Get.back();
-              Get.back();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
 
   String _getMatchWinner(BadmintonMatchModel match) {
     if (match.winner == 'team1') {

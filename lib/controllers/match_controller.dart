@@ -47,15 +47,7 @@ class MatchController extends GetxController {
           await prefs.remove('Batminton matches');
           
           matches.value = oldMatches;
-        // } else {
-        //   // Load sample data if no matches exist
-        //   final sampleMatches = SampleData.getSampleMatches();
-        //   matches.value = sampleMatches;
-          
-        //   // Save sample data to new storage format
-        //   for (final match in sampleMatches) {
-        //     await StorageService.saveMatch(match);
-        //   }
+        
         }
       }
     } catch (e) {

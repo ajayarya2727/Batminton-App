@@ -18,16 +18,16 @@ class CreateMatchScreen extends StatelessWidget {
     final TextEditingController team2NameController = TextEditingController();
     
     // Player name controllers
-    final RxList<TextEditingController> team1Controllers = <TextEditingController>[].obs;
-    final RxList<TextEditingController> team2Controllers = <TextEditingController>[].obs;
+    final RxList<TextEditingController> team1PlayerNameControllers = <TextEditingController>[].obs;
+    final RxList<TextEditingController> team2PlayerNameControllers = <TextEditingController>[].obs;
     
     // Team logo selection
     final RxString team1Logo = '🏸'.obs;
     final RxString team2Logo = '⚡'.obs;
 
     // Initialize controllers
-    team1Controllers.add(TextEditingController());
-    team2Controllers.add(TextEditingController());
+    team1PlayerNameControllers.add(TextEditingController());
+    team2PlayerNameControllers.add(TextEditingController());
 
     return Scaffold(
       appBar: AppBar(
@@ -37,21 +37,26 @@ class CreateMatchScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
-        elevation: 0,
+        // elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildMatchTypeSelector(selectedMatchType, team1Controllers, team2Controllers, context),
+            _buildMatchTypeSelector(
+              selectedMatchType, 
+              team1PlayerNameControllers, 
+              team2PlayerNameControllers,
+              context
+             ),
             const SizedBox(height: 24),
             Obx(() => _buildTeamInputs(
               selectedMatchType.value, 
               team1NameController, 
               team2NameController,
-              team1Controllers, 
-              team2Controllers,
+              team1PlayerNameControllers, 
+              team2PlayerNameControllers,
               team1Logo,
               team2Logo,
               context,
@@ -62,8 +67,8 @@ class CreateMatchScreen extends StatelessWidget {
               selectedMatchType,
               team1NameController,
               team2NameController,
-              team1Controllers, 
-              team2Controllers,
+              team1PlayerNameControllers, 
+              team2PlayerNameControllers,
               team1Logo,
               team2Logo,
               context,
@@ -76,8 +81,8 @@ class CreateMatchScreen extends StatelessWidget {
 
   Widget _buildMatchTypeSelector(
     Rx<BadmintonMatchType> selectedMatchType,
-    RxList<TextEditingController> team1Controllers,
-    RxList<TextEditingController> team2Controllers,
+    RxList<TextEditingController> team1PlayerNameControllers,
+    RxList<TextEditingController> team2PlayerNameControllers,
     BuildContext context,
   ) {
     return Card(
@@ -86,7 +91,7 @@ class CreateMatchScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -107,7 +112,7 @@ class CreateMatchScreen extends StatelessWidget {
                   groupValue: selectedMatchType.value,
                   onChanged: (value) {
                     selectedMatchType.value = value!;
-                    _updateControllers(team1Controllers, team2Controllers, 1);
+                    _updatePlayerNameControllers(team1PlayerNameControllers, team2PlayerNameControllers, 1);
                   },
                   activeColor: Colors.green.shade600,
                 ),
@@ -118,7 +123,7 @@ class CreateMatchScreen extends StatelessWidget {
                   groupValue: selectedMatchType.value,
                   onChanged: (value) {
                     selectedMatchType.value = value!;
-                    _updateControllers(team1Controllers, team2Controllers, 2);
+                    _updatePlayerNameControllers(team1PlayerNameControllers, team2PlayerNameControllers, 2);
                   },
                   activeColor: Colors.green.shade600,
                 ),
@@ -134,8 +139,8 @@ class CreateMatchScreen extends StatelessWidget {
     BadmintonMatchType matchType,
     TextEditingController team1NameController,
     TextEditingController team2NameController,
-    RxList<TextEditingController> team1Controllers,
-    RxList<TextEditingController> team2Controllers,
+    RxList<TextEditingController> team1PlayerNameControllers,
+    RxList<TextEditingController> team2PlayerNameControllers,
     RxString team1Logo,
     RxString team2Logo,
     BuildContext context,
@@ -144,17 +149,17 @@ class CreateMatchScreen extends StatelessWidget {
 
     return Column(
       children: [
-        _buildTeamCard('Team 1', team1NameController, team1Controllers, playersPerTeam, team1Logo, Colors.blue, context),
+        _buildTeamCard('Team 1', team1NameController, team1PlayerNameControllers, playersPerTeam, team1Logo, Colors.blue, context),
         const SizedBox(height: 16),
-        _buildTeamCard('Team 2', team2NameController, team2Controllers, playersPerTeam, team2Logo, Colors.green, context),
+        _buildTeamCard('Team 2', team2NameController, team2PlayerNameControllers, playersPerTeam, team2Logo, Colors.green, context),
       ],
     );
   }
 
   Widget _buildTeamCard(
-    String teamName,
+    String teamNamelabel,
     TextEditingController teamNameController,
-    RxList<TextEditingController> controllers,
+    RxList<TextEditingController> playerNameControllers,
     int playersCount,
     RxString teamLogo,
     MaterialColor teamColor,
@@ -172,7 +177,7 @@ class CreateMatchScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -180,8 +185,8 @@ class CreateMatchScreen extends StatelessWidget {
             Row(
               children: [
                 Obx(() => Container(
-                  width: MediaQuery.of(context).size.width * 0.125,
-                  height: MediaQuery.of(context).size.width * 0.125,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: teamColor.shade100,
                     borderRadius: BorderRadius.circular(25),
@@ -197,7 +202,7 @@ class CreateMatchScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    teamName,
+                    teamNamelabel,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -222,7 +227,7 @@ class CreateMatchScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: teamColor.shade600),
                 ),
-                prefixIcon: Icon(Icons.group, color: teamColor.shade600),
+                // prefixIcon: Icon(Icons.group, color: teamColor.shade600),
               ),
               textCapitalization: TextCapitalization.words,
             ),
@@ -238,18 +243,18 @@ class CreateMatchScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Container(
-              height: MediaQuery.of(context).size.height * 0.075,
+              height: 80,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: availableLogos.length,
                 itemBuilder: (context, index) {
                   final logo = availableLogos[index];
-                  return Obx(() => GestureDetector(
+                  return Obx(() => GestureDetector( //anything tapable
                     onTap: () => teamLogo.value = logo,
                     child: Container(
-                      width: MediaQuery.of(context).size.width * 0.125,
-                      height: MediaQuery.of(context).size.width * 0.125,
-                      margin: EdgeInsets.only(right: MediaQuery.of(context).size.width * 0.02),
+                      width: 50,
+                      height: 50,
+                      margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
                         color: teamLogo.value == logo 
                             ? teamColor.shade200 
@@ -284,29 +289,31 @@ class CreateMatchScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            ...List.generate(playersCount, (index) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TextFormField(
-                  controller: controllers[index],
-                  decoration: InputDecoration(
-                    labelText: playersCount == 1 
-                        ? 'Player Name' 
-                        : 'Player ${index + 1} Name',
-                    hintText: 'Enter player name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+            Column(
+              children: List.generate(playersCount, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextFormField(
+                    controller: playerNameControllers[index],
+                    decoration: InputDecoration(
+                      labelText: playersCount == 1 
+                          ? 'Player Name' 
+                          : 'Player ${index + 1} Name',
+                      hintText: 'Enter player name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: teamColor.shade600),
+                      ),
+                      prefixIcon: Icon(Icons.person, color: teamColor.shade600),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: teamColor.shade600),
-                    ),
-                    prefixIcon: Icon(Icons.person, color: teamColor.shade600),
+                    textCapitalization: TextCapitalization.words,
                   ),
-                  textCapitalization: TextCapitalization.words,
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ],
         ),
       ),
@@ -318,8 +325,8 @@ class CreateMatchScreen extends StatelessWidget {
     Rx<BadmintonMatchType> selectedMatchType,
     TextEditingController team1NameController,
     TextEditingController team2NameController,
-    RxList<TextEditingController> team1Controllers,
-    RxList<TextEditingController> team2Controllers,
+    RxList<TextEditingController> team1PlayerNameControllers,
+    RxList<TextEditingController> team2PlayerNameControllers,
     RxString team1Logo,
     RxString team2Logo,
     BuildContext context,
@@ -336,8 +343,8 @@ class CreateMatchScreen extends StatelessWidget {
             selectedMatchType.value,
             team1NameController,
             team2NameController,
-            team1Controllers,
-            team2Controllers,
+            team1PlayerNameControllers,
+            team2PlayerNameControllers,
             team1Logo.value,
             team2Logo.value,
           );
@@ -346,7 +353,7 @@ class CreateMatchScreen extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green.shade600,
           foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: MediaQuery.of(context).size.height * 0.02),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -355,15 +362,15 @@ class CreateMatchScreen extends StatelessWidget {
           ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.05,
-                  height: MediaQuery.of(context).size.width * 0.05,
+                const SizedBox(
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
-                SizedBox(width: MediaQuery.of(context).size.width * 0.03),
+                const SizedBox(width: 12),
                 const Text(
                   'Creating Match...',
                   style: TextStyle(
@@ -384,26 +391,26 @@ class CreateMatchScreen extends StatelessWidget {
     );
   }
 
-  void _updateControllers(
-    RxList<TextEditingController> team1Controllers,
-    RxList<TextEditingController> team2Controllers,
+  void _updatePlayerNameControllers(
+    RxList<TextEditingController> team1PlayerNameControllers,
+    RxList<TextEditingController> team2PlayerNameControllers,
     int playersPerTeam,
   ) {
     // Clear existing controllers
-    for (var controller in team1Controllers) {
+    for (var controller in team1PlayerNameControllers) {
       controller.dispose();
     }
-    for (var controller in team2Controllers) {
+    for (var controller in team2PlayerNameControllers) {
       controller.dispose();
     }
 
-    team1Controllers.clear();
-    team2Controllers.clear();
+    team1PlayerNameControllers.clear();
+    team2PlayerNameControllers.clear();
 
     // Add new controllers
     for (int i = 0; i < playersPerTeam; i++) {
-      team1Controllers.add(TextEditingController());
-      team2Controllers.add(TextEditingController());
+      team1PlayerNameControllers.add(TextEditingController());
+      team2PlayerNameControllers.add(TextEditingController());
     }
   }
 
@@ -412,8 +419,8 @@ class CreateMatchScreen extends StatelessWidget {
     BadmintonMatchType matchType,
     TextEditingController team1NameController,
     TextEditingController team2NameController,
-    RxList<TextEditingController> team1Controllers,
-    RxList<TextEditingController> team2Controllers,
+    RxList<TextEditingController> team1PlayerNameControllers,
+    RxList<TextEditingController> team2PlayerNameControllers,
     String team1Logo,
     String team2Logo,
   ) async {
@@ -458,15 +465,32 @@ class CreateMatchScreen extends StatelessWidget {
     }
 
     // Validate player names
-    final team1Players = team1Controllers
-        .map((c) => c.text.trim())
-        .where((name) => name.isNotEmpty)
-        .toList();
+    // final team1Players = team1PlayerNameControllers
+    //     .map((c) => c.text.trim())
+    //     .where((name) => name.isNotEmpty)
+    //     .toList();
     
-    final team2Players = team2Controllers
-        .map((c) => c.text.trim())
-        .where((name) => name.isNotEmpty)
-        .toList();
+    // final team2Players = team2PlayerNameControllers
+    //     .map((c) => c.text.trim())
+    //     .where((name) => name.isNotEmpty)
+    //     .toList();
+    List<String> team1Players = [];
+
+for (var controller in team1PlayerNameControllers) {
+  String name = controller.text.trim(); // text lo + space hatao
+  if (name.isNotEmpty) {
+    team1Players.add(name); 
+  }
+}
+
+List<String> team2Players = [];
+
+for (var controller in team2PlayerNameControllers) {
+  String name = controller.text.trim();
+  if (name.isNotEmpty) {
+    team2Players.add(name);
+  }
+}
 
     final requiredPlayers = matchType.requiredPlayersPerTeam;
 
@@ -609,7 +633,7 @@ class CreateMatchScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade600,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: MediaQuery.of(Get.context!).size.height * 0.02),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -639,7 +663,7 @@ class CreateMatchScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: MediaQuery.of(Get.context!).size.height * 0.02),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -691,7 +715,7 @@ class CreateMatchScreen extends StatelessWidget {
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.grey.shade600,
-                  padding: EdgeInsets.symmetric(vertical: MediaQuery.of(Get.context!).size.height * 0.015),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.home, size: 20),
                 label: const Text(

@@ -5,8 +5,8 @@ import '../home_screen_options/main_screen.dart';
 class CreateTeamController extends GetxController {
   // Text controllers
   final TextEditingController teamNameController = TextEditingController();
-  final TextEditingController player1Controller = TextEditingController();
-  final TextEditingController player2Controller = TextEditingController();
+  final TextEditingController player1NameController = TextEditingController();
+  final TextEditingController player2NameController = TextEditingController();
   
   // Reactive variables
   final RxString selectedLogo = '🏸'.obs;
@@ -35,7 +35,7 @@ class CreateTeamController extends GetxController {
       return;
     }
 
-    if (player1Controller.text.trim().isEmpty) {
+    if (player1NameController.text.trim().isEmpty) {
       Get.snackbar(
         'Error',
         'Please enter at least one player name',
@@ -72,11 +72,11 @@ class CreateTeamController extends GetxController {
   }
 
   @override
-  void onClose() {
+  void dispose() {
     // Dispose controllers
     teamNameController.dispose();
-    player1Controller.dispose();
-    player2Controller.dispose();
+    player1NameController.dispose();
+    player2NameController.dispose();
     super.onClose();
   }
 }

@@ -6,9 +6,9 @@ import '../models/badminton_models.dart';
 class StorageService {
   static const String _matchesFolder = 'matches';
   
-  // Get the matches directory
-  static Future<Directory> _getMatchesDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
+  // Create matches storage folder
+  static Future<Directory> _createMatchesStorage() async {
+    final appDir = await getApplicationDocumentsDirectory();  //flutter build in function
     final matchesDir = Directory('${appDir.path}/$_matchesFolder');
     
     if (!await matchesDir.exists()) {
@@ -21,7 +21,7 @@ class StorageService {
   // Save a single match to its own JSON file
   static Future<void> saveMatch(BadmintonMatchModel match) async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matchFile = File('${matchesDir.path}/${match.matchId}.json');
       
       final matchJson = json.encode(match.toJson());
@@ -38,7 +38,7 @@ class StorageService {
   // Load a single match from its JSON file
   static Future<BadmintonMatchModel?> loadMatch(String matchId) async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matchFile = File('${matchesDir.path}/$matchId.json');
       
       if (!await matchFile.exists()) {
@@ -57,7 +57,7 @@ class StorageService {
   // Load all matches from individual JSON files
   static Future<List<BadmintonMatchModel>> loadAllMatches() async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matches = <BadmintonMatchModel>[];
       
       if (!await matchesDir.exists()) {
@@ -90,7 +90,7 @@ class StorageService {
   // Delete a match file
   static Future<void> deleteMatch(String matchId) async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matchFile = File('${matchesDir.path}/$matchId.json');
       
       if (await matchFile.exists()) {
@@ -104,7 +104,7 @@ class StorageService {
   // Get all match IDs (file names without .json extension)
   static Future<List<String>> getAllMatchIds() async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matchIds = <String>[];
       
       if (!await matchesDir.exists()) {
@@ -130,7 +130,7 @@ class StorageService {
   // Check if a match file exists
   static Future<bool> matchExists(String matchId) async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final matchFile = File('${matchesDir.path}/$matchId.json');
       return await matchFile.exists();
     } catch (e) {
@@ -141,7 +141,7 @@ class StorageService {
   // Clear all match files (for testing/reset purposes)
   static Future<void> clearAllMatches() async {
     try {
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       
       if (await matchesDir.exists()) {
         await matchesDir.delete(recursive: true);
@@ -501,20 +501,20 @@ class StorageService {
 
 
   // DEMO: Print exact file path for manual editing
-  static Future<void> printFilePath() async {
-    try {
-      final matchesDir = await _getMatchesDirectory();
-      print('');
-      print('=== JSON FILES LOCATION ===');
-      print('Matches folder path: ${matchesDir.path}');
-      print('Individual match files: [matchId].json');
-      print('Example: ${matchesDir.path}/match_123.json');
-      print('=========================');
-      print('');
-    } catch (e) {
-      print('Error getting path: $e');
-    }
-  }
+  // static Future<void> printFilePath() async {
+  //   try {
+  //     final matchesDir = await _createMatchesStorage();
+  //     print('');
+  //     print('=== JSON FILES LOCATION ===');
+  //     print('Matches folder path: ${matchesDir.path}');
+  //     print('Individual match files: [matchId].json');
+  //     print('Example: ${matchesDir.path}/match_123.json');
+  //     print('=========================');
+  //     print('');
+  //   } catch (e) {
+  //     print('Error getting path: $e');
+  //   }
+  // }
 
   // DEMO: Save match JSON to a readable file for debugging
   static Future<void> saveMatchJsonToFile(String matchId) async {
@@ -526,7 +526,7 @@ class StorageService {
         return;
       }
       
-      final matchesDir = await _getMatchesDirectory();
+      final matchesDir = await _createMatchesStorage();
       final debugFile = File('${matchesDir.path}/${matchId}_debug.json');
       
       // Create pretty formatted JSON
