@@ -28,8 +28,8 @@ class MatchController extends GetxController {
         matches.value = loadedMatches;
       } else {
         // Check if we have old SharedPreferences data to migrate
-        final prefs = await SharedPreferences.getInstance();
-        final matchesJson = prefs.getString('Batminton matches');
+        final oldStorageData = await SharedPreferences.getInstance();
+        final matchesJson = oldStorageData.getString('Batminton matches');
         
         if (matchesJson != null) {
           // Migrate old data to new storage format
@@ -44,7 +44,7 @@ class MatchController extends GetxController {
           }
           
           // Clear old storage
-          await prefs.remove('Batminton matches');
+          await oldStorageData.remove('Batminton matches');
           
           matches.value = oldMatches;
         
