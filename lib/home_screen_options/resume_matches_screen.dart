@@ -9,7 +9,7 @@ class ResumeMatchesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MatchController controller = Get.find<MatchController>();
+    final MatchController controller = Get.put(MatchController());
 
     return Scaffold(
       appBar: AppBar(

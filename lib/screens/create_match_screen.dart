@@ -10,7 +10,7 @@ class CreateMatchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MatchController controller = Get.find<MatchController>();
+    final MatchController controller = Get.put(MatchController());
     final Rx<BadmintonMatchType> selectedMatchType = BadmintonMatchType.singles.obs;
     
     // Team name controllers

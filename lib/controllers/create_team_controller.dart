@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../home_screen_options/main_screen.dart';
 
 class CreateTeamController extends GetxController {
   // Text controllers
@@ -68,7 +67,7 @@ class CreateTeamController extends GetxController {
 
   // Navigate to home screen function
   void navigateToHome() {
-    Get.off(() => const MainScreen());
+    Get.offAllNamed('/');
   }
 
   @override

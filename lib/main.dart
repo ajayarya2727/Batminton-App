@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'controllers/match_controller.dart';
-import 'home_screen_options/main_screen.dart';  // ← Main buttons screen
-import 'screens/match_detail_screen.dart';
+import 'home_screen_options/horizontal_menu.dart';
 
 void main() {
-  runApp(const MyApp());  // ← App start point
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -14,26 +12,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Badminton Score App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(),  // ← First screen to load
       debugShowCheckedModeBanner: false,
-      getPages: [
-        GetPage(
-          name: '/',
-          page: () => const MyHomePage(),
-        ),
-        GetPage(
-          name: '/match-detail',
-          page: () {
-            final String matchId = Get.arguments as String;
-            return MatchDetailScreen(matchId: matchId);
-          },
-        ),
-      ],
+      home: const MyHomePage(),
     );
   }
 }
@@ -43,10 +23,17 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize match controller for app
-    Get.put(MatchController());
-    
-    // Load main screen with buttons
-    return const MainScreen();  // ← Goes to home_screen_options/main_screen.dart
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Badminton App'),
+        backgroundColor: Colors.green.shade600,
+        foregroundColor: Colors.white,
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(20),
+        child: HorizontalMenu(),
+      ),
+    );
   }
 }
