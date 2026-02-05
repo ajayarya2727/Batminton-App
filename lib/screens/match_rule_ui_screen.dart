@@ -1211,8 +1211,8 @@ class MatchDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              controller.completeMatch(match.matchId);
               Get.back();
+              controller.completeMatch(match.matchId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,

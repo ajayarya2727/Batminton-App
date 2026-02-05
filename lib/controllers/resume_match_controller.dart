@@ -20,7 +20,7 @@ class ResumeMatchController extends GetxController {
       final loadedMatches = await StorageService.loadAllMatches();
       matches.value = loadedMatches;
     } catch (e) {
-      // Get.snackbar('Error', 'Failed to load matches: $e');
+      Get.snackbar('Error', 'Failed to load matches: $e');
     } finally {
       isLoading.value = false;
     }
@@ -43,13 +43,13 @@ class ResumeMatchController extends GetxController {
       if (match.status == BadmintonMatchStatus.inProgress) {
         matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.paused);
         await StorageService.saveMatch(matches[matchIndex]);
-        // Get.snackbar(
-        //   'Match Paused', 
-        //   'Match has been paused. You can resume anytime.',
-        //   backgroundColor: Colors.orange.shade100,
-        //   colorText: Colors.orange.shade700,
-        //   icon: Icon(Icons.pause_circle, color: Colors.orange.shade700),
-        // );
+        Get.snackbar(
+          'Match Paused', 
+          'Match has been paused. You can resume anytime.',
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade700,
+          icon: Icon(Icons.pause_circle, color: Colors.orange.shade700),
+        );
       }
     }
   }
@@ -61,13 +61,13 @@ class ResumeMatchController extends GetxController {
       if (match.status == BadmintonMatchStatus.paused) {
         matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.inProgress);
         await StorageService.saveMatch(matches[matchIndex]);
-        // Get.snackbar(
-        //   'Match Resumed', 
-        //   'Match has been resumed. Continue playing!',
-        //   backgroundColor: Colors.green.shade100,
-        //   colorText: Colors.green.shade700,
-        //   icon: Icon(Icons.play_circle, color: Colors.green.shade700),
-        // );
+        Get.snackbar(
+          'Match Resumed', 
+          'Match has been resumed. Continue playing!',
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade700,
+          icon: Icon(Icons.play_circle, color: Colors.green.shade700),
+        );
       }
     }
   }
@@ -78,7 +78,7 @@ class ResumeMatchController extends GetxController {
     if (matchIndex != -1) {
       matches[matchIndex] = matches[matchIndex].copyWith(status: BadmintonMatchStatus.completed);
       await StorageService.saveMatch(matches[matchIndex]);
-      // Get.snackbar('Match Completed', 'Match has been marked as completed!');
+      Get.snackbar('Match Completed', 'Match has been marked as completed!');
     }
   }
 
@@ -90,7 +90,7 @@ class ResumeMatchController extends GetxController {
   // }
 
   // Get paused/incomplete matches for resume screen
-  List<BadmintonMatchModel> ShowPousedMatchesInList() {
+  List<BadmintonMatchModel> showPausedMatchesInList() {
     return matches.where((match) => 
       !match.isCompleted || match.status == BadmintonMatchStatus.paused
     ).toList();

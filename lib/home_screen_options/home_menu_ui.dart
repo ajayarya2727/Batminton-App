@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../screens/create_match_screen.dart';
+import '../screens/create_match_ui_screen.dart';
 import 'create_team_screen.dart';
 import 'create_tournament_ui_screen.dart';
 import 'resume_matches_ui_screen.dart';

@@ -63,38 +63,17 @@ class CreateMatchController extends GetxController {
     final team2Name = team2NameController.text.trim();
     
     if (team1Name.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter Team 1 name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Please enter Team 1 name');
       return;
     }
     
     if (team2Name.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter Team 2 name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Please enter Team 2 name');
       return;
     }
     
     if (team1Name.toLowerCase() == team2Name.toLowerCase()) {
-      Get.snackbar(
-        'Error',
-        'Team names must be different',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Team names must be different');
       return;
     }
 
@@ -120,40 +99,19 @@ class CreateMatchController extends GetxController {
     final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
 
     if (team1Players.length != requiredPlayers) {
-      Get.snackbar(
-        'Error',
-        'Please enter all player names for $team1Name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Please enter all player names for $team1Name');
       return;
     }
 
     if (team2Players.length != requiredPlayers) {
-      Get.snackbar(
-        'Error',
-        'Please enter all player names for $team2Name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Please enter all player names for $team2Name');
       return;
     }
 
     // Check for duplicate player names
     final allPlayers = [...team1Players, ...team2Players];
     if (allPlayers.length != allPlayers.toSet().length) {
-      Get.snackbar(
-        'Error',
-        'Player names must be unique',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Player names must be unique');
       return;
     }
 
@@ -211,24 +169,28 @@ class CreateMatchController extends GetxController {
       // Add match to controller first (without initializing first round)
       await myMatchesController.addMatch(match);
       
-      // Show service selection dialog with team names and logos
-      showServiceSelectionAndNavigate(controller, match, team1Name, team2Name, team1Logo.value, team2Logo.value);
+      // Show service selection dialog
+      showServiceSelectionDialog(controller, match, team1Name, team2Name, team1Logo.value, team2Logo.value);
       
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to create match. Please try again.',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-      );
+      showError('Failed to create match. Please try again.');
     } finally {
       isCreating.value = false;
     }
   }
 
-  void showServiceSelectionAndNavigate(
+  void showError(String message) {
+    Get.snackbar(
+      'Error',
+      message,
+      backgroundColor: Colors.red.shade100,
+      colorText: Colors.red.shade700,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  void showServiceSelectionDialog(
     MatchController controller, 
     BadmintonMatchModel match, 
     String team1Name, 
@@ -355,32 +317,8 @@ class CreateMatchController extends GetxController {
               width: double.infinity,
               child: TextButton.icon(
                 onPressed: () async {
-                  try {
-                    // Close dialog first
-                    Get.back();
-                    
-                    // Delete the created match since user cancelled
-                    await Get.find<MyMatchesController>().deleteMatch(match.matchId);
-
-                    // Navigate back to home screen, clearing the navigation stack
-                    Get.offAll(() => const MatchesListScreen());
-                    
-                    // Show cancellation message
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      Get.snackbar(
-                        'Match Cancelled', 
-                        'Match creation was cancelled',
-                        backgroundColor: Colors.orange.shade100,
-                        colorText: Colors.orange.shade700,
-                        icon: Icon(Icons.cancel, color: Colors.orange.shade700),
-                        snackPosition: SnackPosition.TOP,
-                        duration: const Duration(seconds: 2),
-                      );
-                    });
-                  } catch (e) {
-                    // If there's an error, still navigate back
-                    Get.offAll(() => const MatchesListScreen());
-                  }
+                  Get.back(); // Close dialog first
+                  await cancelMatchCreation(match.matchId);
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.grey.shade600,
@@ -420,18 +358,51 @@ class CreateMatchController extends GetxController {
         attempts++;
       }
       
-      // Navigate to match detail screen, removing create match screen from stack
-      Get.off(() => MatchDetailScreen(matchId: matchId));
+      // Navigate to match detail screen
+      navigateToMatch(matchId);
       
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to initialize match. Please try again.',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-        snackPosition: SnackPosition.TOP,
-      );
+      showError('Failed to initialize match. Please try again.');
     }
+  }
+
+  Future<void> cancelMatchCreation(String matchId) async {
+    try {
+      // Delete the created match since user cancelled
+      await Get.find<MyMatchesController>().deleteMatch(matchId);
+      
+      // Navigate back to home screen
+      navigateToHome();
+      
+      // Show cancellation message
+      showMatchCancelledMessage();
+      
+    } catch (e) {
+      // If there's an error, still navigate back
+      navigateToHome();
+    }
+  }
+
+  void showMatchCancelledMessage() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Get.snackbar(
+        'Match Cancelled', 
+        'Match creation was cancelled',
+        backgroundColor: Colors.orange.shade100,
+        colorText: Colors.orange.shade700,
+        icon: Icon(Icons.cancel, color: Colors.orange.shade700),
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 2),
+      );
+    });
+  }
+
+  void navigateToMatch(String matchId) {
+    Get.off(() => MatchDetailScreen(matchId: matchId));
+  }
+
+  void navigateToHome() {
+    Get.offAll(() => const MatchesListScreen());
   }
 
   @override

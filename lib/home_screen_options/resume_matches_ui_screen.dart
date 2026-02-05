@@ -27,7 +27,7 @@ class ResumeMatchesScreen extends StatelessWidget {
         }
 
         // Filter only paused/incomplete matches
-        final pausedMatches = controller.ShowPousedMatchesInList();
+        final pausedMatches = controller.showPausedMatchesInList();
 
         if (pausedMatches.isEmpty) {
           return const Center(
