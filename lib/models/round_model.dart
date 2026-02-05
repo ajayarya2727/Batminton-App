@@ -11,6 +11,7 @@ class BadmintonRoundModel {
   final BadmintonRoundStatus status;
   final String? winnerId;
   final bool milestone21Reached;
+  final bool continueTo30Chosen; // Flag to track if user chose "Continue to 30"
   final DateTime? startedAt;
   final DateTime? completedAt;
   final String? currentServer; // Player ID who is currently serving
@@ -25,6 +26,7 @@ class BadmintonRoundModel {
     this.status = BadmintonRoundStatus.notStarted,
     this.winnerId,
     this.milestone21Reached = false,
+    this.continueTo30Chosen = false,
     this.startedAt,
     this.completedAt,
     this.currentServer,
@@ -49,6 +51,7 @@ class BadmintonRoundModel {
       'status': status.code,
       'winnerId': winnerId,
       'milestone21Reached': milestone21Reached,
+      'continueTo30Chosen': continueTo30Chosen,
       'startedAt': startedAt?.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'currentServer': currentServer,
@@ -67,6 +70,7 @@ class BadmintonRoundModel {
       status: BadmintonRoundStatus.fromCode(json['status'] as String? ?? 'not_started'),
       winnerId: json['winnerId'] as String?,
       milestone21Reached: json['milestone21Reached'] as bool? ?? false,
+      continueTo30Chosen: json['continueTo30Chosen'] as bool? ?? false,
       startedAt: json['startedAt'] != null 
           ? DateTime.parse(json['startedAt'] as String)
           : null,
@@ -94,6 +98,7 @@ class BadmintonRoundModel {
     BadmintonRoundStatus? status,
     String? winnerId,
     bool? milestone21Reached,
+    bool? continueTo30Chosen,
     DateTime? startedAt,
     DateTime? completedAt,
     String? currentServer,
@@ -108,6 +113,7 @@ class BadmintonRoundModel {
       status: status ?? this.status,
       winnerId: winnerId ?? this.winnerId,
       milestone21Reached: milestone21Reached ?? this.milestone21Reached,
+      continueTo30Chosen: continueTo30Chosen ?? this.continueTo30Chosen,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       currentServer: currentServer ?? this.currentServer,
@@ -146,6 +152,10 @@ class BadmintonRoundModel {
 
   BadmintonRoundModel markMilestone21Reached() {
     return copyWith(milestone21Reached: true);
+  }
+
+  BadmintonRoundModel markContinueTo30Chosen() {
+    return copyWith(continueTo30Chosen: true);
   }
 
   BadmintonRoundModel updateServer(String newServer) {

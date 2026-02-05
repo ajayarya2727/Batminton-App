@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/match_controller.dart';
+import '../controllers/match_rule_controller.dart';
+import '../controllers/my_matches_list_controller.dart';
 import '../models/badminton_models.dart';
+import 'matches_list_ui_screen.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final String matchId;
@@ -10,7 +12,8 @@ class MatchDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MatchController controller = Get.put(MatchController());
+    final MatchController matchcontroller = Get.put(MatchController());
+    final MyMatchesController myMatchesController = Get.put(MyMatchesController());
 
     return Scaffold(
       appBar: AppBar(
@@ -24,14 +27,14 @@ class MatchDetailScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Go back to previous screen (Resume Match screen)
-            Get.back();
+            // Go directly to My Matches list
+            Get.offAll(() => const MatchesListScreen());
           },
         ),
 
       ),
       body: Obx(() {
-        final match = controller.getMatchById(matchId);
+        final match = myMatchesController.getMatchById(matchId);
         
         if (match == null) {
           return const Center(
@@ -54,19 +57,19 @@ class MatchDetailScreen extends StatelessWidget {
                 _buildRoundHistory(match),
                 const SizedBox(height: 24),
               ],
-              _buildScoreSection(match, controller),
+              _buildScoreSection(match, matchcontroller),
               const SizedBox(height: 24),
               // Add manual service selection button for in-progress matches
-              if (!match.isCompleted && match.rounds.isNotEmpty) _buildManualServiceButton(match, controller),
+              if (!match.isCompleted && match.rounds.isNotEmpty) _buildManualServiceButton(match, matchcontroller),
               const SizedBox(height: 16),
               // Add break/resume button for in-progress matches
-              if (!match.isCompleted) _buildBreakResumeButton(match, controller),
+              if (!match.isCompleted) _buildBreakResumeButton(match, matchcontroller),
               const SizedBox(height: 16),
               _buildMatchInfo(match),
               const SizedBox(height: 24),
               _buildScorecard(match),
               const SizedBox(height: 24),
-              if (!match.isCompleted) _buildCompleteButton(match, controller),
+              if (!match.isCompleted) _buildCompleteButton(match, matchcontroller),
             ],
           ),
         );
@@ -140,7 +143,7 @@ class MatchDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Round ${match.currentRoundNumber} of 3',
+                  'Round ${match.displayRoundNumber} of 3',
                   style: TextStyle(
                     color: Colors.orange.shade700,
                     fontWeight: FontWeight.bold,
@@ -252,7 +255,7 @@ class MatchDetailScreen extends StatelessWidget {
                       ),
                       if (!match.isCompleted)
                         Text(
-                          'Round ${match.currentRoundNumber}',
+                          'Round ${match.displayRoundNumber}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -449,37 +452,173 @@ class MatchDetailScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Match Completed',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
+              Row(
+                children: [
+                  Icon(Icons.emoji_events, color: Colors.green.shade600, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Match Completed',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Winner: ${_getMatchWinner(match)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
                 ),
-                child: Text(
-                  'Final Match Score: ${match.team1RoundsWon} - ${match.team2RoundsWon}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Winner: ${_getMatchWinner(match)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Final Match Score: ${match.team1RoundsWon} - ${match.team2RoundsWon}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Teams & Players',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // Team 1 Section
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(match.team1.teamLogo, style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              ...match.team1.players.map((player) => Text(
+                                player.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              )),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${match.team1Score} pts',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // VS Divider
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'VS',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                        
+                        // Team 2 Section
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(match.team2.teamLogo, style: const TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              ...match.team2.players.map((player) => Text(
+                                player.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              )),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${match.team2Score} pts',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -541,7 +680,7 @@ class MatchDetailScreen extends StatelessWidget {
             Text(
               isPaused 
                 ? 'Match is paused - Resume to continue scoring'
-                : 'Round ${match.currentRoundNumber} - Tap player buttons to score points',
+                : 'Round ${match.displayRoundNumber} - Tap player buttons to score points',
               style: TextStyle(
                 fontSize: 12,
                 color: isPaused ? Colors.orange.shade600 : Colors.grey.shade600,
@@ -796,7 +935,7 @@ class MatchDetailScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _buildInfoRow('Match ID', match.matchId),
             _buildInfoRow('Match Type', match.matchType.displayName),
-            _buildInfoRow('Current Round', '${match.currentRoundNumber} of 3'),
+            _buildInfoRow('Current Round', '${match.displayRoundNumber} of 3'),
             _buildInfoRow('Rounds Won', '${match.team1RoundsWon} - ${match.team2RoundsWon}'),
              _buildInfoRow('Created', _formatDate(match.createdAt)),
             _buildInfoRow('Status', match.isCompleted ? 'Completed' : 'In Progress'),
@@ -996,7 +1135,7 @@ class MatchDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Round ${match.currentRoundNumber} of 3',
+                    'Round ${match.displayRoundNumber} of 3',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -1236,100 +1375,6 @@ class MatchDetailScreen extends StatelessWidget {
               ],
             ),
             
-            const SizedBox(height: 20),
-            
-            // Round by Round Breakdown
-            if (scorecard.roundScores.isNotEmpty) ...[
-              Text(
-                'Round by Round Performance',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...scorecard.roundScores.entries.map((entry) {
-                final roundNumber = entry.key;
-                final scores = entry.value;
-                final team1Score = scores['team1'] ?? 0;
-                final team2Score = scores['team2'] ?? 0;
-                final winner = team1Score > team2Score ? 'Team 1' : 'Team 2';
-                
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade100,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'R$roundNumber',
-                            style: TextStyle(
-                              color: Colors.purple.shade700,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$team1Score',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: team1Score > team2Score ? Colors.green.shade700 : Colors.black,
-                              ),
-                            ),
-                            const Text('-', style: TextStyle(fontSize: 14)),
-                            Text(
-                              '$team2Score',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: team2Score > team1Score ? Colors.green.shade700 : Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          winner,
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
           ],
         ),
       ),

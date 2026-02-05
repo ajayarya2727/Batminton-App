@@ -34,7 +34,7 @@ class BadmintonMatchModel {
   bool get isCompleted => status == BadmintonMatchStatus.completed;
   bool get isInProgress => status == BadmintonMatchStatus.inProgress;
   
-  // Get current round
+  // Get current round (active/in-progress round)
   BadmintonRoundModel? get currentRound {
     if (rounds.isEmpty || currentRoundNumber > rounds.length) return null;
     return rounds[currentRoundNumber - 1];
@@ -63,6 +63,32 @@ class BadmintonMatchModel {
   
   // Get current server from current round
   String? get currentServer => currentRound?.currentServer;
+  
+  // Get display round number for UI (handles completed rounds properly)
+  int get displayRoundNumber {
+    if (rounds.isEmpty) return 1;
+    
+    // If match is completed, show the last round number
+    if (isCompleted) return rounds.length;
+    
+    // Count completed rounds
+    final completedRounds = rounds.where((r) => r.isCompleted).length;
+    
+    // If all rounds are completed but match isn't marked complete, show last round
+    if (completedRounds == rounds.length) {
+      return rounds.length;
+    }
+    
+    // If there's an in-progress round, show its number
+    for (final round in rounds) {
+      if (round.isInProgress) {
+        return round.roundNumber;
+      }
+    }
+    
+    // Otherwise, show the next round number (completed rounds + 1)
+    return completedRounds + 1;
+  }
   
   // Legacy compatibility properties for existing code
   List<String> get team1Players => team1.players.map((p) => p.name).toList();
@@ -180,6 +206,8 @@ class BadmintonMatchModel {
       currentServer: defaultServer,
       pointSequence: [], // Empty at start
       playerScores: initialPlayerScores,
+      milestone21Reached: false, // Ensure milestone is reset
+      continueTo30Chosen: false, // Ensure continue flag is reset
     );
     
     // Update players with current round scores and server status
@@ -290,30 +318,59 @@ class BadmintonMatchModel {
     
     return copyWith(rounds: updatedRounds);
   }
+
+  BadmintonMatchModel markContinueTo30Chosen() {
+    if (currentRound == null) return this;
+    
+    final updatedRound = currentRound!.markContinueTo30Chosen();
+    final updatedRounds = List<BadmintonRoundModel>.from(rounds);
+    updatedRounds[currentRoundNumber - 1] = updatedRound;
+    
+    return copyWith(rounds: updatedRounds);
+  }
   
   BadmintonMatchModel completeCurrentRound(String winnerId) {
     if (currentRound == null) return this;
     
+    // Complete the current round with winner
     final completedRound = currentRound!.complete(winnerId);
     final updatedRounds = List<BadmintonRoundModel>.from(rounds);
     updatedRounds[currentRoundNumber - 1] = completedRound;
     
+    // Check if match is complete after this round
     final updatedMatch = copyWith(rounds: updatedRounds);
+    final team1Wins = updatedMatch.team1RoundsWon;
+    final team2Wins = updatedMatch.team2RoundsWon;
     
-    if (updatedMatch.isMatchComplete) {
+    // Best of 3: Match complete when someone wins 2 rounds
+    if (team1Wins >= 2 || team2Wins >= 2) {
+      final matchWinner = team1Wins >= 2 ? 'team1' : 'team2';
       return updatedMatch.copyWith(
         status: BadmintonMatchStatus.completed,
-        winnerId: updatedMatch.matchWinner,
+        winnerId: matchWinner,
       );
     }
     
+    // Match continues - return updated match with completed round
+    // Note: currentRoundNumber stays the same until next round is started
     return updatedMatch;
   }
   
   BadmintonMatchModel startNextRound() {
-    if (isMatchComplete || currentRoundNumber >= 3) return this;
+    print('DEBUG: startNextRound called - isMatchComplete: $isMatchComplete, currentRoundNumber: $currentRoundNumber');
+    
+    if (isMatchComplete) {
+      print('DEBUG: Match is already complete, cannot start next round');
+      return this;
+    }
+    
+    if (currentRoundNumber >= 3) {
+      print('DEBUG: Already at maximum rounds (3), cannot start next round');
+      return this;
+    }
     
     final nextRoundNumber = currentRoundNumber + 1;
+    print('DEBUG: Creating round $nextRoundNumber');
     
     // Determine who should serve first in next round
     // In badminton, the winner of previous round serves first in next round
@@ -326,11 +383,12 @@ class BadmintonMatchModel {
         nextRoundServer = team1.players.first.playerId;
       } else if (winnerTeamId == 'team2') {
         nextRoundServer = team2.players.first.playerId;
-      } else {
-        // If it's already a player ID, use it directly
-        nextRoundServer = winnerTeamId;
       }
+      print('DEBUG: Previous round winner: $winnerTeamId, next server: $nextRoundServer');
     }
+    
+    // If no previous round winner, default to team1 first player
+    nextRoundServer ??= team1.players.first.playerId;
     
     // Initialize player scores to 0 for all players in the new round
     Map<String, int> initialPlayerScores = {};
@@ -349,14 +407,19 @@ class BadmintonMatchModel {
       currentServer: nextRoundServer,
       pointSequence: [], // Empty at start
       playerScores: initialPlayerScores,
+      milestone21Reached: false, // Reset milestone for new round
+      continueTo30Chosen: false, // Reset continue flag for new round
     );
     
     final updatedRounds = List<BadmintonRoundModel>.from(rounds)..add(nextRound);
     
-    return copyWith(
+    final result = copyWith(
       rounds: updatedRounds,
       currentRoundNumber: nextRoundNumber,
     );
+    
+    print('DEBUG: startNextRound completed - new currentRoundNumber: ${result.currentRoundNumber}, total rounds: ${result.rounds.length}');
+    return result;
   }
 
   // Legacy compatibility methods for existing controller

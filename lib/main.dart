@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'home_screen_options/horizontal_menu.dart';
+import 'home_screen_options/home_menu_ui.dart';
 
 void main() {
   runApp(const MyApp());

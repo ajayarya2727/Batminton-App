@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/match_controller.dart';
+import '../controllers/resume_match_controller.dart';
 import '../models/badminton_models.dart';
-import 'match_detail_screen.dart';
-import 'create_match_screen.dart';
+import '../screens/match_rule_ui_screen.dart';
 
-class MatchesListScreen extends StatelessWidget {
-  const MatchesListScreen({super.key});
+class ResumeMatchesScreen extends StatelessWidget {
+  const ResumeMatchesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final MatchController controller = Get.put(MatchController());
+    final ResumeMatchController controller = Get.put(ResumeMatchController());
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'My Matches',
+          'Resume Matches',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.purple.shade600,
+        backgroundColor: Colors.red.shade600,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -27,19 +26,22 @@ class MatchesListScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.matches.isEmpty) {
+        // Filter only paused/incomplete matches
+        final pausedMatches = controller.ShowPousedMatchesInList();
+
+        if (pausedMatches.isEmpty) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.sports_tennis,
+                  Icons.play_circle_outline,
                   size: 80,
                   color: Colors.grey,
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'No matches yet!',
+                  'No matches to resume!',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey,
@@ -48,7 +50,7 @@ class MatchesListScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Create your first match',
+                  'All your matches are completed',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -60,29 +62,23 @@ class MatchesListScreen extends StatelessWidget {
         }
 
         // Sort matches by creation time (latest first)
-        final sortedMatches = List<BadmintonMatchModel>.from(controller.matches);
-        sortedMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        pausedMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         return RefreshIndicator(
           onRefresh: controller.loadMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: sortedMatches.length,
+            itemCount: pausedMatches.length,
             itemBuilder: (context, index) {
-              return _buildMatchCard(sortedMatches[index]);
+              return _buildResumeMatchCard(pausedMatches[index]);
             },
           ),
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Get.to(() => const CreateMatchScreen()),
-        backgroundColor: Colors.green.shade600,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 
-  Widget _buildMatchCard(BadmintonMatchModel match) {
+  Widget _buildResumeMatchCard(BadmintonMatchModel match) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -107,6 +103,35 @@ class MatchesListScreen extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.play_circle_fill,
+                            size: 14,
+                            color: Colors.red.shade700,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Resume',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
                         color: match.matchType == BadmintonMatchType.singles 
                             ? Colors.blue.shade100 
                             : Colors.purple.shade100,
@@ -123,55 +148,6 @@ class MatchesListScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (match.isCompleted)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Completed',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    else if (match.status == BadmintonMatchStatus.paused)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.pause_circle,
-                              size: 14,
-                              color: Colors.orange.shade700,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Paused',
-                              style: TextStyle(
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -219,15 +195,16 @@ class MatchesListScreen extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
                       ),
                       child: Text(
                         '${match.team1Score} - ${match.team2Score}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Colors.red.shade700,
                         ),
                       ),
                     ),
@@ -283,12 +260,19 @@ class MatchesListScreen extends StatelessWidget {
                         color: Colors.grey.shade500,
                       ),
                     ),
-                    Text(
-                      _getTimeAgo(match.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green.shade600,
-                        fontWeight: FontWeight.w500,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Tap to Resume',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -303,22 +287,5 @@ class MatchesListScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${(difference.inDays / 7).floor()}w ago';
-    }
   }
 }

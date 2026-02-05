@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/match_controller.dart';
+import '../controllers/match_rule_controller.dart';
+import '../controllers/my_matches_list_controller.dart';
 import '../models/badminton_models.dart';
-import 'matches_list_screen.dart';
-import 'match_detail_screen.dart';
+import 'matches_list_ui_screen.dart';
+import 'match_rule_ui_screen.dart';
 
 class CreateMatchScreen extends StatelessWidget {
   const CreateMatchScreen({super.key});
@@ -11,6 +12,7 @@ class CreateMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MatchController controller = Get.put(MatchController());
+    final MyMatchesController myMatchesController = Get.put(MyMatchesController());
     final Rx<BadmintonMatchType> selectedMatchType = BadmintonMatchType.singles.obs;
     
     // Team name controllers
@@ -64,6 +66,7 @@ class CreateMatchScreen extends StatelessWidget {
             const SizedBox(height: 32),
             _buildCreateButton(
               controller, 
+              myMatchesController,
               selectedMatchType,
               team1NameController,
               team2NameController,
@@ -322,6 +325,7 @@ class CreateMatchScreen extends StatelessWidget {
 
   Widget _buildCreateButton(
     MatchController controller,
+    MyMatchesController myMatchesController,
     Rx<BadmintonMatchType> selectedMatchType,
     TextEditingController team1NameController,
     TextEditingController team2NameController,
@@ -340,6 +344,7 @@ class CreateMatchScreen extends StatelessWidget {
           isCreating.value = true;
           await _createMatch(
             controller,
+            myMatchesController,
             selectedMatchType.value,
             team1NameController,
             team2NameController,
@@ -416,6 +421,7 @@ class CreateMatchScreen extends StatelessWidget {
 
   Future<void> _createMatch(
     MatchController controller,
+    MyMatchesController myMatchesController,
     BadmintonMatchType matchType,
     TextEditingController team1NameController,
     TextEditingController team2NameController,
@@ -572,6 +578,7 @@ for (var controller in team2PlayerNameControllers) {
           ? BadmintonMatchType.singles 
           : BadmintonMatchType.doubles;
       
+      // Create match without initializing first round yet
       final match = BadmintonMatchModel(
         matchId: matchId,
         matchType: actualMatchType,
@@ -580,14 +587,11 @@ for (var controller in team2PlayerNameControllers) {
         createdAt: DateTime.now(),
       );
 
-      // Initialize first round with empty player scores for JSON
-      final initializedMatch = match.initializeFirstRound();
-
-      // Add match to controller first
-      await controller.addMatch(initializedMatch);
+      // Add match to controller first (without initializing first round)
+      await myMatchesController.addMatch(match);
       
       // Show service selection dialog with team names and logos
-      _showServiceSelectionAndNavigate(controller, initializedMatch, team1Name, team2Name, team1Logo, team2Logo);
+      _showServiceSelectionAndNavigate(controller, match, team1Name, team2Name, team1Logo, team2Logo);
       
     } catch (e) {
       Get.snackbar(
@@ -616,71 +620,124 @@ for (var controller in team2PlayerNameControllers) {
           mainAxisSize: MainAxisSize.min,
           children: [
             // const Text(
-            //   'Select which team will serve first in Round 1:',
+            //   'Select which player will serve first in Round 1:',
             //   style: TextStyle(fontSize: 16),
             //   textAlign: TextAlign.center,
             // ),
+            // const SizedBox(height: 8),
+            // Text(
+            //   'Choose any player from either team',
+            //   style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            //   textAlign: TextAlign.center,
+            // ),
             const SizedBox(height: 20),
-            // Team 1 option
+            
+            // Team 1 Players Section
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.back(); // Close dialog
-                  _initializeMatchAndNavigate(controller, match.matchId, match.team1.players.first.playerId);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      team1Logo,
-                      style: const TextStyle(fontSize: 24),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(team1Logo, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Text(
+                        team1Name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...match.team1.players.map((player) => Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Get.back(); // Close dialog
+                        _initializeMatchAndNavigate(controller, match.matchId, player.playerId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: const Icon(Icons.sports_tennis, size: 18),
+                      label: Text(
+                        player.name,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      team1Name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
+                  )),
+                ],
               ),
             ),
-            // Team 2 option
+            
+            const SizedBox(height: 16),
+            
+            // Team 2 Players Section
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.back(); // Close dialog
-                  _initializeMatchAndNavigate(controller, match.matchId, match.team2.players.first.playerId);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      team2Logo,
-                      style: const TextStyle(fontSize: 24),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        team2Name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(team2Logo, style: const TextStyle(fontSize: 18)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...match.team2.players.map((player) => Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Get.back(); // Close dialog
+                        _initializeMatchAndNavigate(controller, match.matchId, player.playerId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      icon: const Icon(Icons.sports_tennis, size: 18),
+                      label: Text(
+                        player.name,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      team2Name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
+                  )),
+                ],
               ),
             ),
+            
+            const SizedBox(height: 16),
+            
             // Back to Home button
             Container(
               width: double.infinity,
@@ -691,8 +748,9 @@ for (var controller in team2PlayerNameControllers) {
                     Get.back();
                     
                     // Delete the created match since user cancelled
-                    await controller.deleteMatch(match.matchId);
                     
+                    await Get.find<MyMatchesController>().deleteMatch(match.matchId);
+
                     // Navigate back to home screen, clearing the navigation stack
                     Get.offAll(() => const MatchesListScreen());
                     
@@ -735,6 +793,21 @@ for (var controller in team2PlayerNameControllers) {
     try {
       // Initialize match with selected server
       await controller.initializeMatchWithService(matchId, initialServer);
+      
+      // Ensure the match is properly loaded in MyMatchesController
+      final myMatchesController = Get.find<MyMatchesController>();
+      
+      // Wait for the match to be available in the controller
+      int attempts = 0;
+      while (attempts < 10) {
+        final match = myMatchesController.getMatchById(matchId);
+        if (match != null && match.rounds.isNotEmpty) {
+          // Match is properly initialized, safe to navigate
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 50));
+        attempts++;
+      }
       
       // Navigate to match detail screen, removing create match screen from stack
       Get.off(() => MatchDetailScreen(matchId: matchId));
