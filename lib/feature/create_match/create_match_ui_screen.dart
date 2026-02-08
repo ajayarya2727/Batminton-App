@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/create_match_controller.dart';
-import '../controllers/match_rule_controller.dart';
-import '../controllers/my_matches_list_controller.dart';
-import '../models/badminton_models.dart';
-import 'matches_list_ui_screen.dart';
-import 'match_rule_ui_screen.dart';
+import 'create_match_controller.dart';
+import '../match_rule/match_rule_controller.dart';
+import '../matches_list/my_matches_list_controller.dart';
+import '../../models/badminton_models.dart';
 
 class CreateMatchScreen extends StatelessWidget {
   const CreateMatchScreen({super.key});

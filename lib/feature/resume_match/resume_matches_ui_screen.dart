@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/resume_match_controller.dart';
-import '../models/badminton_models.dart';
-import '../screens/match_rule_ui_screen.dart';
+import 'resume_match_controller.dart';
+import '../../models/badminton_models.dart';
+import '../match_rule/match_rule_ui_screen.dart';
 
 class ResumeMatchesScreen extends StatelessWidget {
   const ResumeMatchesScreen({super.key});

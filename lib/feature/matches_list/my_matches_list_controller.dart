@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/badminton_models.dart';
-import '../services/storage_service.dart';
+import '../../models/badminton_models.dart';
+import '../../services/storage_service.dart';
 
 class MyMatchesController extends GetxController {
   final RxList<BadmintonMatchModel> matches = <BadmintonMatchModel>[].obs;

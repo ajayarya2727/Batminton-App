@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/match_rule_controller.dart';
-import '../controllers/my_matches_list_controller.dart';
-import '../models/badminton_models.dart';
-import 'matches_list_ui_screen.dart';
+import 'match_rule_controller.dart';
+import '../matches_list/my_matches_list_controller.dart';
+import '../../models/badminton_models.dart';
+import '../matches_list/matches_list_ui_screen.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final String matchId;

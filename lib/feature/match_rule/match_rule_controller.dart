@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../models/badminton_models.dart';
-import '../services/storage_service.dart';
-import 'my_matches_list_controller.dart';
+import '../../models/badminton_models.dart';
+import '../../services/storage_service.dart';
+import '../matches_list/my_matches_list_controller.dart';
 
 class MatchController extends GetxController {
   // Show service selection dialog when match starts 

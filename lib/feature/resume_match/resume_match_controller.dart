@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../models/badminton_models.dart';
-import '../services/storage_service.dart';
+import '../../models/badminton_models.dart';
+import '../../services/storage_service.dart';
 
 class ResumeMatchController extends GetxController {
   final RxList<BadmintonMatchModel> matches = <BadmintonMatchModel>[].obs;

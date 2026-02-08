@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../screens/create_match_ui_screen.dart';
-import 'create_team_screen.dart';
-import 'create_tournament_ui_screen.dart';
-import 'resume_matches_ui_screen.dart';
-import '../screens/matches_list_ui_screen.dart';
+import '../feature/create_match/create_match_ui_screen.dart';
+import '../feature/create_team/create_team_screen.dart';
+import '../feature/my_tournament/create_tournament_ui_screen.dart';
+import '../feature/resume_match/resume_matches_ui_screen.dart';
+import '../feature/matches_list/matches_list_ui_screen.dart';
 
 class MenuButton extends StatelessWidget {
   final String title;

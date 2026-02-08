@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/create_team_controller.dart';
+import 'create_team_controller.dart';
 
 class CreateTeamScreen extends StatelessWidget {
   const CreateTeamScreen({super.key});

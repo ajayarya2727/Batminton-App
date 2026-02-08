@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/my_matches_list_controller.dart';
-import '../models/badminton_models.dart';
-import 'match_rule_ui_screen.dart';
-import '../main.dart';
+import 'my_matches_list_controller.dart';
+import '../../models/badminton_models.dart';
+import '../match_rule/match_rule_ui_screen.dart';
+import '../../main.dart';
 
 class MatchesListScreen extends StatelessWidget {
   const MatchesListScreen({super.key});
