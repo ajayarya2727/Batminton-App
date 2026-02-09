@@ -42,10 +42,10 @@ class MatchController extends GetxController {
     if (match.currentRound == null) return;
     
     final updatedRound = match.currentRound!.copyWith(currentServer: servingPlayerId);
-    final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
-    updatedRounds[match.currentRoundNumber - 1] = updatedRound;
+    final updatedmatchRounds = List<BadmintonRoundModel>.from(match.rounds);
+    updatedmatchRounds[match.currentRoundNumber - 1] = updatedRound;
     
-    _matchesController.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
+    _matchesController.matches[matchIndex] = match.copyWith(rounds: updatedmatchRounds);
     await StorageService.saveMatch(_matchesController.matches[matchIndex]);
   }
 
@@ -144,7 +144,7 @@ class MatchController extends GetxController {
 
   // Complete current round
   Future<void> completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];

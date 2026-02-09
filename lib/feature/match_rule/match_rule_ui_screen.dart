@@ -14,11 +14,7 @@ class MatchDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final MatchController matchcontroller = Get.put(MatchController());
     final MyMatchesController myMatchesController = Get.put(MyMatchesController());
-
-    // Setup all dialog observers
-
     
-
     ever(matchcontroller.showManualServiceDialog, (bool show) {
   if (show && matchcontroller.pendingMatch.value != null) {
     _showManualServiceSelectionDialog(

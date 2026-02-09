@@ -98,12 +98,6 @@ class CreateMatchController extends GetxController {
       return;
     }
 
-    // final allPlayers = [...team1Players, ...team2Players];
-    // if (allPlayers.length != allPlayers.toSet().length) {
-    //   errorMessage.value = 'Player names must be unique';
-    //   return;
-    // }
-
     try {
       isCreating.value = true;
       
