@@ -17,7 +17,7 @@ class MyMatchesController extends GetxController {
   }
 
   // Get sorted matches (newest first)
-  List<BadmintonMatchModel> getSortedMatches() {
+  List<BadmintonMatchModel> LetestFirstSortedMatches() {
     final sortedList = List<BadmintonMatchModel>.from(matches);
     sortedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return sortedList;
@@ -35,15 +35,13 @@ class MyMatchesController extends GetxController {
         matches.value = loadedMatches;
       } else {
         // Check if we have old SharedPreferences data to migrate
-        final oldStorageData = await SharedPreferences.getInstance();
-        final matchesJson = oldStorageData.getString('Batminton matches');
+        final oldStoredData = await SharedPreferences.getInstance();
+        final matchesJson = oldStoredData.getString('Batminton matches');
         
         if (matchesJson != null) {
           // Migrate old data to new storage format
           final List<dynamic> matchesList = json.decode(matchesJson);
-          final oldMatches = matchesList
-              .map((json) => BadmintonMatchModel.fromJson(json))
-              .toList();
+          final oldMatches = matchesList.map((json) => BadmintonMatchModel.fromJson(json)).toList();
           
           // Save each match to individual files
           for (final match in oldMatches) {
@@ -51,13 +49,13 @@ class MyMatchesController extends GetxController {
           }
           
           // Clear old storage
-          await oldStorageData.remove('Batminton matches');
+          await oldStoredData.remove('Batminton matches');
           
           matches.value = oldMatches;
         }
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load matches: $e');
+      errorMessage.value = 'Failed to load matches: $e';
     } finally {
       isLoading.value = false;
     }
@@ -71,7 +69,7 @@ class MyMatchesController extends GetxController {
         await StorageService.saveMatch(match);
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to save matches: $e');
+      errorMessage.value = 'Failed to save matches: $e';
     }
   }
 
@@ -79,7 +77,7 @@ class MyMatchesController extends GetxController {
   Future<void> addMatch(BadmintonMatchModel match) async {
     matches.add(match);
     await StorageService.saveMatch(match);
-    Get.snackbar('Success', 'Match created successfully!');
+    successMessage.value = 'Match created successfully!';
   }
 
   // Get match by ID
@@ -108,29 +106,9 @@ class MyMatchesController extends GetxController {
       // Delete from storage
       await StorageService.deleteMatch(matchId);
       
-      Get.snackbar('Success', 'Match deleted successfully!');
+      successMessage.value = 'Match deleted successfully!';
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete match: $e');
+      errorMessage.value = 'Failed to delete match';
     }
-  }
-
-  // Get matches by status
-  List<BadmintonMatchModel> getMatchesByStatus(BadmintonMatchStatus status) {
-    return matches.where((match) => match.status == status).toList();
-  }
-
-  // Get completed matches
-  List<BadmintonMatchModel> getCompletedMatches() {
-    return matches.where((match) => match.isCompleted).toList();
-  }
-
-  // Get in-progress matches
-  List<BadmintonMatchModel> getInProgressMatches() {
-    return matches.where((match) => !match.isCompleted && match.status == BadmintonMatchStatus.inProgress).toList();
-  }
-
-  // Get paused matches
-  List<BadmintonMatchModel> getPausedMatches() {
-    return matches.where((match) => match.status == BadmintonMatchStatus.paused).toList();
   }
 }

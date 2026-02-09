@@ -25,7 +25,7 @@ class MatchController extends GetxController {
 
   // Initialize match with first server
   Future<void> initializeMatchWithService(String matchId, String initialServer) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];
@@ -35,7 +35,7 @@ class MatchController extends GetxController {
 
   // Manually change server during match
   Future<void> manuallySetService(String matchId, String servingPlayerId) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];
@@ -51,7 +51,7 @@ class MatchController extends GetxController {
 
   // Update player score and handle game logic
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];
