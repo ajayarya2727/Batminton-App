@@ -1,7 +1,3 @@
-// =============================================================================
-// MATCH MODEL - Main Match Information with Teams and Rounds
-// =============================================================================
-
 import 'enums.dart';
 import 'team_model.dart';
 import 'round_model.dart';

@@ -1,78 +1,53 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 class CreateTeamController extends GetxController {
-  // Text controllers
   final TextEditingController teamNameController = TextEditingController();
   final TextEditingController player1NameController = TextEditingController();
   final TextEditingController player2NameController = TextEditingController();
   
-  // Reactive variables
   final RxString selectedLogo = '🏸'.obs;
   final RxBool isCreating = false.obs;
+  
+  // State variables for UI
+  final RxString errorMessage = ''.obs;
+  final RxBool teamCreated = false.obs;
 
-  // Available logos
   final List<String> availableLogos = [
     '🏸', '⚡', '🔥', '💪', '🏆', '⭐', '🎯', '🚀', '💎', '👑'
   ];
 
-  // Update selected logo
   void updateSelectedLogo(String logo) {
     selectedLogo.value = logo;
   }
 
-  // Validate and create team
   Future<void> createTeam() async {
-    // Validate inputs
     if (teamNameController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a team name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-      );
+      errorMessage.value = 'Please enter a team name';
       return;
     }
 
     if (player1NameController.text.trim().isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter at least one player name',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-      );
+      errorMessage.value = 'Please enter at least one player name';
       return;
     }
 
     isCreating.value = true;
 
     try {
-      // Simulate team creation process
       await Future.delayed(const Duration(milliseconds: 500));
       
-      // Navigate to home screen
-      navigateToHome();
+      teamCreated.value = true;
       
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to create team. Please try again.',
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade700,
-      );
+      errorMessage.value = 'Failed to create team. Please try again.';
     } finally {
       isCreating.value = false;
     }
   }
 
-  // Navigate to home screen function
-  void navigateToHome() {
-    Get.offAllNamed('/');
-  }
-
   @override
-  void dispose() {
-    // Dispose controllers
+  void onClose() {
     teamNameController.dispose();
     player1NameController.dispose();
     player2NameController.dispose();

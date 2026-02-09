@@ -10,7 +10,34 @@ class MatchesListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MyMatchesController controller = Get.put(MyMatchesController());
+    final controller = Get.put(MyMatchesController());
+
+    // Setup observers once
+    ever(controller.successMessage, (String message) {
+      if (message.isNotEmpty) {
+        Get.snackbar(
+          'Success',
+          message,
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade700,
+          icon: Icon(Icons.check_circle, color: Colors.green.shade700),
+        );
+        controller.successMessage.value = '';
+      }
+    });
+
+    ever(controller.errorMessage, (String message) {
+      if (message.isNotEmpty) {
+        Get.snackbar(
+          'Error',
+          message,
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade700,
+          icon: Icon(Icons.error, color: Colors.red.shade700),
+        );
+        controller.errorMessage.value = '';
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -23,10 +50,7 @@ class MatchesListScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Go back to home screen
-            Get.offAll(() => const MyHomePage());
-          },
+          onPressed: () => Get.offAll(() => const MyHomePage()),
         ),
       ),
       body: Obx(() {
@@ -35,53 +59,45 @@ class MatchesListScreen extends StatelessWidget {
         }
 
         if (controller.matches.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.sports_tennis,
-                  size: 80,
-                  color: Colors.grey,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'No matches yet!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Create your first match',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          );
+          return _buildEmptyState();
         }
-
-        // Sort matches by creation time (latest first)
-        final sortedMatches = List<BadmintonMatchModel>.from(controller.matches);
-        sortedMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         return RefreshIndicator(
           onRefresh: controller.loadMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: sortedMatches.length,
+            itemCount: controller.getSortedMatches().length,
             itemBuilder: (context, index) {
-              return _buildMatchCard(sortedMatches[index]);
+              return _buildMatchCard(controller.getSortedMatches()[index]);
             },
           ),
         );
       }),
-      // Removed FloatingActionButton since Create Match option is available on home screen
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.sports_tennis, size: 80, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No matches yet!',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Create your first match',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -90,9 +106,7 @@ class MatchesListScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
           onTap: () => Get.to(() => MatchDetailScreen(matchId: match.matchId)),
           borderRadius: BorderRadius.circular(12),
@@ -101,201 +115,11 @@ class MatchesListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: match.matchType == BadmintonMatchType.singles 
-                            ? Colors.blue.shade100 
-                            : Colors.purple.shade100,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        match.matchType.displayName,
-                        style: TextStyle(
-                          color: match.matchType == BadmintonMatchType.singles 
-                              ? Colors.blue.shade700 
-                              : Colors.purple.shade700,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    if (match.isCompleted)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Completed',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                    else if (match.status == BadmintonMatchStatus.paused)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.pause_circle,
-                              size: 14,
-                              color: Colors.orange.shade700,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Paused',
-                              style: TextStyle(
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+                _buildMatchHeader(match),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                match.team1.teamLogo,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  match.team1.teamName.isNotEmpty 
-                                      ? match.team1.teamName 
-                                      : 'Team 1',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            match.team1Players.join(' & '),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${match.team1Score} - ${match.team2Score}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  match.team2.teamName.isNotEmpty 
-                                      ? match.team2.teamName 
-                                      : 'Team 2',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.end,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                match.team2.teamLogo,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            match.team2Players.join(' & '),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.end,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                _buildMatchScore(match),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Created: ${_formatDate(match.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                    Text(
-                      _getTimeAgo(match.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                _buildMatchFooter(match),
               ],
             ),
           ),
@@ -304,24 +128,171 @@ class MatchesListScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMatchHeader(BadmintonMatchModel match) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: match.matchType == BadmintonMatchType.singles
+                ? Colors.blue.shade100
+                : Colors.purple.shade100,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            match.matchType.displayName,
+            style: TextStyle(
+              color: match.matchType == BadmintonMatchType.singles
+                  ? Colors.blue.shade700
+                  : Colors.purple.shade700,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        _buildStatusBadge(match),
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(BadmintonMatchModel match) {
+    if (match.isCompleted) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.shade100,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          'Completed',
+          style: TextStyle(
+            color: Colors.green.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      );
+    } else if (match.status == BadmintonMatchStatus.paused) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade100,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pause_circle, size: 14, color: Colors.orange.shade700),
+            const SizedBox(width: 4),
+            Text(
+              'Paused',
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildMatchScore(BadmintonMatchModel match) {
+    return Row(
+      children: [
+        Expanded(child: _buildTeamInfo(match.team1, match.team1Players, true)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '${match.team1Score} - ${match.team2Score}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        Expanded(child: _buildTeamInfo(match.team2, match.team2Players, false)),
+      ],
+    );
+  }
+
+  Widget _buildTeamInfo(BadmintonTeamModel team, List<String> players, bool isLeft) {
+    return Column(
+      crossAxisAlignment: isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisAlignment: isLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
+          children: [
+            if (isLeft) ...[
+              Text(team.teamLogo, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                team.teamName.isNotEmpty ? team.teamName : (isLeft ? 'Team 1' : 'Team 2'),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: isLeft ? TextAlign.left : TextAlign.right,
+              ),
+            ),
+            if (!isLeft) ...[
+              const SizedBox(width: 8),
+              Text(team.teamLogo, style: const TextStyle(fontSize: 16)),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          players.join(' & '),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textAlign: isLeft ? TextAlign.left : TextAlign.right,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMatchFooter(BadmintonMatchModel match) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Created: ${_formatDate(match.createdAt)}',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+        ),
+        Text(
+          _getTimeAgo(match.createdAt),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.green.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+    final difference = DateTime.now().difference(date);
 
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${(difference.inDays / 7).floor()}w ago';
-    }
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${(difference.inDays / 7).floor()}w ago';
   }
 }

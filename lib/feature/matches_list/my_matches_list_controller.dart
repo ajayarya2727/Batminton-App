@@ -7,11 +7,20 @@ import '../../services/storage_service.dart';
 class MyMatchesController extends GetxController {
   final RxList<BadmintonMatchModel> matches = <BadmintonMatchModel>[].obs;
   final RxBool isLoading = false.obs;
+  final RxString successMessage = ''.obs;
+  final RxString errorMessage = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadMatches();
+  }
+
+  // Get sorted matches (newest first)
+  List<BadmintonMatchModel> getSortedMatches() {
+    final sortedList = List<BadmintonMatchModel>.from(matches);
+    sortedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sortedList;
   }
 
   // Load matches from json file
@@ -102,23 +111,6 @@ class MyMatchesController extends GetxController {
       Get.snackbar('Success', 'Match deleted successfully!');
     } catch (e) {
       Get.snackbar('Error', 'Failed to delete match: $e');
-    }
-  }
-
-  // DEMO/DEBUG METHODS for JSON operations
-  Future<void> printMatchJsonById(String matchId) async {
-    await StorageService.printMatchById(matchId);
-  }
-
-  Future<void> printCompleteMatchJson(String matchId) async {
-    final match = getMatchById(matchId);
-    if (match != null) {
-      // Save current state first
-      await StorageService.saveMatch(match);
-      // Print complete JSON in chunks
-      await StorageService.printMatchById(matchId);
-      // Also save to debug file for complete viewing
-      await StorageService.saveMatchJsonToFile(matchId);
     }
   }
 

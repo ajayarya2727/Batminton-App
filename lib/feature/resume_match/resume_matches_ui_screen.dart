@@ -11,6 +11,33 @@ class ResumeMatchesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ResumeMatchController controller = Get.put(ResumeMatchController());
 
+    // Setup message observers
+    ever(controller.successMessage, (String message) {
+      if (message.isNotEmpty) {
+        Get.snackbar(
+          'Success',
+          message,
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade700,
+          icon: Icon(Icons.check_circle, color: Colors.green.shade700),
+        );
+        controller.successMessage.value = '';
+      }
+    });
+
+    ever(controller.errorMessage, (String message) {
+      if (message.isNotEmpty) {
+        Get.snackbar(
+          'Error',
+          message,
+          backgroundColor: Colors.red.shade100,
+          colorText: Colors.red.shade700,
+          icon: Icon(Icons.error, color: Colors.red.shade700),
+        );
+        controller.errorMessage.value = '';
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -26,43 +53,11 @@ class ResumeMatchesScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Filter only paused/incomplete matches
-        final pausedMatches = controller.showPausedMatchesInList();
+        final pausedMatches = controller.getSortedPausedMatches();
 
         if (pausedMatches.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.play_circle_outline,
-                  size: 80,
-                  color: Colors.grey,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'No matches to resume!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'All your matches are completed',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          );
+          return _buildEmptyState();
         }
-
-        // Sort matches by creation time (latest first)
-        pausedMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         return RefreshIndicator(
           onRefresh: controller.loadMatches,
@@ -75,6 +70,38 @@ class ResumeMatchesScreen extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.play_circle_outline,
+            size: 80,
+            color: Colors.grey,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'No matches to resume!',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'All your matches are completed',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

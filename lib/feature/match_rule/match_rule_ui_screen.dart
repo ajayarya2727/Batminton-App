@@ -15,6 +15,77 @@ class MatchDetailScreen extends StatelessWidget {
     final MatchController matchcontroller = Get.put(MatchController());
     final MyMatchesController myMatchesController = Get.put(MyMatchesController());
 
+    // Setup all dialog observers
+
+    
+
+    ever(matchcontroller.showManualServiceDialog, (bool show) {
+  if (show && matchcontroller.pendingMatch.value != null) {
+    _showManualServiceSelectionDialog(
+      context,
+      matchcontroller,
+      matchcontroller.pendingMatch.value!,
+    );
+    matchcontroller.showManualServiceDialog.value = false;
+  }
+});
+
+    ever(matchcontroller.showContinueDialog, (bool show) {
+      if (show && matchcontroller.pendingMatch.value != null) {
+        _showContinueDialog(
+          context,
+          matchcontroller,
+          myMatchesController,
+          matchId,
+          matchcontroller.pendingTeam1Score.value,
+          matchcontroller.pendingTeam2Score.value,
+        );
+        matchcontroller.showContinueDialog.value = false;
+      }
+    });
+
+    ever(matchcontroller.showRoundCompleteDialog, (bool show) {
+      if (show && matchcontroller.pendingMatch.value != null) {
+        _showRoundCompleteDialog(
+          context,
+          matchcontroller,
+          myMatchesController,
+          matchId,
+          matchcontroller.pendingRoundWinner.value,
+          matchcontroller.pendingRoundNumber.value,
+          matchcontroller.pendingTeam1Score.value,
+          matchcontroller.pendingTeam2Score.value,
+        );
+        matchcontroller.showRoundCompleteDialog.value = false;
+      }
+    });
+
+    ever(matchcontroller.showNextRoundServiceDialog, (bool show) {
+      if (show && matchcontroller.pendingMatch.value != null) {
+        _showNextRoundServiceDialog(
+          context,
+          matchcontroller,
+          myMatchesController,
+          matchId,
+          matchcontroller.pendingDefaultServer.value,
+        );
+        matchcontroller.showNextRoundServiceDialog.value = false;
+      }
+    });
+
+    ever(matchcontroller.showMatchCompleteDialog, (bool show) {
+      if (show && matchcontroller.pendingMatch.value != null) {
+        _showMatchCompleteDialog(
+          context,
+          myMatchesController,
+          matchcontroller.pendingMatchWinner.value,
+          matchcontroller.pendingTeam1Rounds.value,
+          matchcontroller.pendingTeam2Rounds.value,
+        );
+        matchcontroller.showMatchCompleteDialog.value = false;
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1028,7 +1099,7 @@ class MatchDetailScreen extends StatelessWidget {
                 ),
                 ElevatedButton.icon(
                   onPressed: isPaused ? null : () {
-                    controller.showManualServiceSelectionDialog(match);
+                    controller.triggerManualServiceDialog(match);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
@@ -1488,5 +1559,764 @@ class MatchDetailScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  // Dialog Methods
+  void _showContinueDialog(
+    BuildContext context,
+    MatchController matchcontroller,
+    MyMatchesController myMatchesController,
+    String matchId,
+    int team1Score,
+    int team2Score,
+  ) {
+    final match = myMatchesController.getMatchById(matchId);
+    if (match == null) return;
+    
+    final winnerPlayer = team1Score == 21 ? match.team1Players.join(' & ') : match.team2Players.join(' & ');
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('🏸 21 Points Reached! (Round ${match.currentRoundNumber})'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$winnerPlayer reached 21 points!',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Round ${match.currentRoundNumber} Score: $team1Score - $team2Score',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Do you want to continue this round?',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                final roundWinner = team1Score == 21 ? 'team1' : 'team2';
+                matchcontroller.completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
+              },
+              child: const Text('No, End Round'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Get.snackbar(
+                  'Continue Playing',
+                  'Round continues to 30 points...',
+                  backgroundColor: Colors.blue.shade100,
+                  colorText: Colors.blue.shade700,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Yes, Continue'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showRoundCompleteDialog(
+    BuildContext context,
+    MatchController matchcontroller,
+    MyMatchesController myMatchesController,
+    String matchId,
+    String roundWinner,
+    int roundNumber,
+    int team1Score,
+    int team2Score,
+  ) {
+    final match = myMatchesController.getMatchById(matchId);
+    if (match == null) return;
+    
+    final winnerName = roundWinner == 'team1' ? match.team1Players.join(' & ') : match.team2Players.join(' & ');
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('🎯 Round $roundNumber Complete!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$winnerName won Round $roundNumber!',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Round $roundNumber Score: $team1Score - $team2Score',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Match Score: ${match.team1RoundsWon} - ${match.team2RoundsWon}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      '🏸 Next Round Service',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$winnerName will serve first in next round',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                matchcontroller.triggerNextRoundServiceDialog(matchId, roundWinner);
+              },
+              child: const Text('Change Service'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                matchcontroller.startNextRound(matchId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Continue to Next Round'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showNextRoundServiceDialog(
+    BuildContext context,
+    MatchController matchcontroller,
+    MyMatchesController myMatchesController,
+    String matchId,
+    String defaultServer,
+  ) {
+    final match = myMatchesController.getMatchById(matchId);
+    if (match == null) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('🏸 Round ${match.currentRoundNumber + 1} Service'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Who should serve first in the next round?',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                // Team 1 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team1.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.startNextRoundWithService(matchId, player.playerId);
+                            Get.snackbar(
+                              'Round Started!',
+                              '${player.name} will serve first',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(player.name),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Team 2 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team2.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.startNextRoundWithService(matchId, player.playerId);
+                            Get.snackbar(
+                              'Round Started!',
+                              '${player.name} will serve first',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(player.name),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMatchCompleteDialog(
+    BuildContext context,
+    MyMatchesController myMatchesController,
+    String matchWinner,
+    int team1Rounds,
+    int team2Rounds,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.emoji_events,
+                    size: 55,
+                    color: Colors.green.shade600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Match Completed',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Winner: $matchWinner',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Final Match Score',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$team1Rounds - $team2Rounds',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'View Match Details',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  void _showServiceSelectionDialog(
+    BuildContext context,
+    MatchController matchcontroller,
+    BadmintonMatchModel match,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('🏸 Select First Server'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Who will serve first?',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                // Team 1 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            match.team1.teamName.isNotEmpty ? match.team1.teamName : "Team 1",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team1.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.initializeMatchWithService(match.matchId, player.playerId);
+                            Get.snackbar(
+                              'Match Started!',
+                              '${player.name} will serve first',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(player.name),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Team 2 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            match.team2.teamName.isNotEmpty ? match.team2.teamName : "Team 2",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team2.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.initializeMatchWithService(match.matchId, player.playerId);
+                            Get.snackbar(
+                              'Match Started!',
+                              '${player.name} will serve first',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(player.name),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showManualServiceSelectionDialog(
+    BuildContext context,
+    MatchController matchcontroller,
+    BadmintonMatchModel match,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('🏸 Change Service'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Current Round: ${match.currentRoundNumber}',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Current Score: ${match.team1Score} - ${match.team2Score}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Who should serve next?',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                // Team 1 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            match.team1.teamName.isNotEmpty ? match.team1.teamName : "Team 1",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team1.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.manuallySetService(match.matchId, player.playerId);
+                            Get.snackbar(
+                              'Service Changed!',
+                              '${player.name} will serve next',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                              icon: Icon(Icons.sports_tennis, color: Colors.green.shade700),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: match.currentServer == player.playerId
+                                ? Colors.green.shade600
+                                : Colors.blue.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (match.currentServer == player.playerId)
+                                const Icon(Icons.sports_tennis, size: 16),
+                              if (match.currentServer == player.playerId)
+                                const SizedBox(width: 8),
+                              Text(
+                                player.name,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Team 2 Players
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            match.team2.teamName.isNotEmpty ? match.team2.teamName : "Team 2",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...match.team2.players.map((player) => Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            matchcontroller.manuallySetService(match.matchId, player.playerId);
+                            Get.snackbar(
+                              'Service Changed!',
+                              '${player.name} will serve next',
+                              backgroundColor: Colors.green.shade100,
+                              colorText: Colors.green.shade700,
+                              icon: Icon(Icons.sports_tennis, color: Colors.green.shade700),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: match.currentServer == player.playerId
+                                ? Colors.green.shade600
+                                : Colors.orange.shade600,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (match.currentServer == player.playerId)
+                                const Icon(Icons.sports_tennis, size: 16),
+                              if (match.currentServer == player.playerId)
+                                const SizedBox(width: 8),
+                              Text(
+                                player.name,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
