@@ -66,9 +66,9 @@ class MatchesListScreen extends StatelessWidget {
           onRefresh: controller.loadMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.getSortedMatches().length,
+            itemCount: controller.LetestFirstSortedMatches().length,
             itemBuilder: (context, index) {
-              return _buildMatchCard(controller.getSortedMatches()[index]);
+              return _buildMatchCard(controller.LetestFirstSortedMatches()[index]);
             },
           ),
         );
