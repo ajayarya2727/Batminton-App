@@ -45,14 +45,14 @@ class CreateMatchScreen extends StatelessWidget {
       }
     });
 
-    // // Setup observer for successful match creation and navigation
-    // ever(controller.createdMatchId, (String matchId) {
-    //   if (matchId.isNotEmpty) {
-    //     // Navigate to match detail screen
-    //     Get.off(() => MatchDetailScreen(matchId: matchId));
-    //     controller.createdMatchId.value = '';
-    //   }
-    // });
+    // Setup observer for successful match creation and navigation
+    ever(controller.createdMatchId, (String matchId) {
+      if (matchId.isNotEmpty) {
+        // Navigate to match detail screen
+        Get.off(() => MatchDetailScreen(matchId: matchId));
+        controller.createdMatchId.value = '';
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
