@@ -4,27 +4,22 @@ import 'resume_match_controller.dart';
 import '../../models/badminton_models.dart';
 import '../match_rule/match_rule_ui_screen.dart';
 
-class ResumeMatchesScreen extends StatelessWidget {
+class ResumeMatchesScreen extends StatefulWidget {
   const ResumeMatchesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final ResumeMatchController controller = Get.put(ResumeMatchController());
+  State<ResumeMatchesScreen> createState() => _ResumeMatchesScreenState();
+}
 
-    // Setup message observers
-    ever(controller.successMessage, (String message) {
-      if (message.isNotEmpty) {
-        Get.snackbar(
-          'Success',
-          message,
-          backgroundColor: Colors.green.shade100,
-          colorText: Colors.green.shade700,
-          icon: Icon(Icons.check_circle, color: Colors.green.shade700),
-        );
-        controller.successMessage.value = '';
-      }
-    });
+class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
+  late final ResumeMatchController controller;
 
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(ResumeMatchController());
+    
+    // Setup error message listener
     ever(controller.errorMessage, (String message) {
       if (message.isNotEmpty) {
         Get.snackbar(
@@ -37,7 +32,10 @@ class ResumeMatchesScreen extends StatelessWidget {
         controller.errorMessage.value = '';
       }
     });
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -53,19 +51,19 @@ class ResumeMatchesScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final pausedMatches = controller.getSortedPausedMatches();
+        final resumableMatches = controller.resumableMatches;
 
-        if (pausedMatches.isEmpty) {
+        if (resumableMatches.isEmpty) {
           return _buildEmptyState();
         }
 
         return RefreshIndicator(
-          onRefresh: controller.loadMatches,
+          onRefresh: controller.refreshMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: pausedMatches.length,
+            itemCount: resumableMatches.length,
             itemBuilder: (context, index) {
-              return _buildResumeMatchCard(pausedMatches[index]);
+              return _buildResumeMatchCard(resumableMatches[index]);
             },
           ),
         );
@@ -201,17 +199,21 @@ class ResumeMatchesScreen extends StatelessWidget {
                                     color: Colors.grey.shade600,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            match.team1Players.join(' & '),
+                            match.team1Players.isNotEmpty 
+                                ? match.team1Players.join(' & ')
+                                : 'Team 1',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -253,6 +255,7 @@ class ResumeMatchesScreen extends StatelessWidget {
                                     fontWeight: FontWeight.w500,
                                   ),
                                   textAlign: TextAlign.end,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -264,12 +267,15 @@ class ResumeMatchesScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            match.team2Players.join(' & '),
+                            match.team2Players.isNotEmpty 
+                                ? match.team2Players.join(' & ')
+                                : 'Team 2',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                             textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

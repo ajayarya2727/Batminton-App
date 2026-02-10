@@ -65,14 +65,9 @@ class CreateMatchController extends GetxController {
       return;
     }
     
-    if (team1Name.toLowerCase() == team2Name.toLowerCase()) {
-      errorMessage.value = 'Team names must be different';
-      return;
-    }
-
     List<String> team1Players = [];
     for (var nameBox  in team1PlayerNameBox) {
-      String name = nameBox .text.trim();
+      String name = nameBox.text.trim();
       if (name.isNotEmpty) {
         team1Players.add(name); 
       }
@@ -107,7 +102,7 @@ class CreateMatchController extends GetxController {
       final team2Timestamp = now.add(Duration(milliseconds: 2)).millisecondsSinceEpoch;
       final playerBaseTimestamp = now.add(Duration(milliseconds: 3)).millisecondsSinceEpoch;
       
-      final team1 = BadmintonTeamModel(
+      final team1 = BadmintonTeamModel( //create BadmintonTeamModel object
         teamId: 'team_$team1Timestamp',
         teamName: team1Name,
         teamLogo: team1Logo.value,
@@ -125,7 +120,7 @@ class CreateMatchController extends GetxController {
         teamLogo: team2Logo.value,
         players: team2Players.asMap().entries.map((entry) => 
           BadmintonPlayerModel(
-            playerId: 'player_${playerBaseTimestamp + entry.key + 10}',
+            playerId: 'player_${playerBaseTimestamp + entry.key + 1}',
             name: entry.value,
           )
         ).toList(),
@@ -134,7 +129,8 @@ class CreateMatchController extends GetxController {
       final actualMatchType = team1Players.length == 1 && team2Players.length == 1 
           ? BadmintonMatchType.singles 
           : BadmintonMatchType.doubles;
-      
+      print('actual match type,$actualMatchType');
+      // Create Match with teams and match type
       final match = BadmintonMatchModel(
         matchId: matchId,
         matchType: actualMatchType,
@@ -155,6 +151,7 @@ class CreateMatchController extends GetxController {
     }
   }
 
+   //create match an round
   Future<void> initializeMatchAndNavigate(String matchId, String initialServer) async {
     try {
       await Get.find<MatchController>().initializeMatchWithService(matchId, initialServer);

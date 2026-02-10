@@ -1,7 +1,3 @@
-// =============================================================================
-// PLAYER MODEL - Individual Player Information with Scoring Data
-// =============================================================================
-
 class BadmintonPlayerModel {
   final String playerId;
   final String name;

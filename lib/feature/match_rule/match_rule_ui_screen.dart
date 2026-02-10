@@ -28,13 +28,14 @@ class MatchDetailScreen extends StatelessWidget {
 
     ever(matchcontroller.showContinueDialog, (bool show) {
       if (show && matchcontroller.pendingMatch.value != null) {
+        final match = matchcontroller.pendingMatch.value!;
         _showContinueDialog(
           context,
           matchcontroller,
           myMatchesController,
           matchId,
-          matchcontroller.pendingTeam1Score.value,
-          matchcontroller.pendingTeam2Score.value,
+          match.team1Score,  // Directly from match
+          match.team2Score,  // Directly from match
         );
         matchcontroller.showContinueDialog.value = false;
       }
@@ -42,15 +43,20 @@ class MatchDetailScreen extends StatelessWidget {
 
     ever(matchcontroller.showRoundCompleteDialog, (bool show) {
       if (show && matchcontroller.pendingMatch.value != null) {
+        final match = matchcontroller.pendingMatch.value!;
+        // Get the last completed round to find winner
+        final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
+        final roundWinner = lastCompletedRound.winnerId ?? '';
+        
         _showRoundCompleteDialog(
           context,
           matchcontroller,
           myMatchesController,
           matchId,
-          matchcontroller.pendingRoundWinner.value,
-          matchcontroller.pendingRoundNumber.value,
-          matchcontroller.pendingTeam1Score.value,
-          matchcontroller.pendingTeam2Score.value,
+          roundWinner,                    // From last completed round
+          lastCompletedRound.roundNumber, // From last completed round
+          lastCompletedRound.team1Score,  // From last completed round
+          lastCompletedRound.team2Score,  // From last completed round
         );
         matchcontroller.showRoundCompleteDialog.value = false;
       }
@@ -58,12 +64,17 @@ class MatchDetailScreen extends StatelessWidget {
 
     ever(matchcontroller.showNextRoundServiceDialog, (bool show) {
       if (show && matchcontroller.pendingMatch.value != null) {
+        final match = matchcontroller.pendingMatch.value!;
+        // Get the last completed round winner as default server
+        final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
+        final defaultServer = lastCompletedRound.winnerId ?? '';
+        
         _showNextRoundServiceDialog(
           context,
           matchcontroller,
           myMatchesController,
           matchId,
-          matchcontroller.pendingDefaultServer.value,
+          defaultServer,  // From last completed round winner
         );
         matchcontroller.showNextRoundServiceDialog.value = false;
       }
@@ -71,12 +82,13 @@ class MatchDetailScreen extends StatelessWidget {
 
     ever(matchcontroller.showMatchCompleteDialog, (bool show) {
       if (show && matchcontroller.pendingMatch.value != null) {
+        final match = matchcontroller.pendingMatch.value!;
         _showMatchCompleteDialog(
           context,
           myMatchesController,
-          matchcontroller.pendingMatchWinner.value,
-          matchcontroller.pendingTeam1Rounds.value,
-          matchcontroller.pendingTeam2Rounds.value,
+          match.matchWinner ?? '',  // Directly from match
+          match.team1RoundsWon,     // Directly from match
+          match.team2RoundsWon,     // Directly from match
         );
         matchcontroller.showMatchCompleteDialog.value = false;
       }
@@ -1713,7 +1725,7 @@ class MatchDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                matchcontroller.triggerNextRoundServiceDialog(matchId, roundWinner);
+                matchcontroller.triggerNextRoundServiceDialog(matchId);
               },
               child: const Text('Change Service'),
             ),

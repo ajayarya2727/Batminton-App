@@ -12,8 +12,8 @@ class CreateMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final CreateMatchController controller = Get.put(CreateMatchController());
-    Get.put(MatchController());
-    Get.put(MyMatchesController());
+    // Get.put(MatchController());
+    // Get.put(MyMatchesController());
 
     // Setup observers for error messages
     ever(controller.errorMessage, (String message) {
@@ -37,14 +37,6 @@ class CreateMatchScreen extends StatelessWidget {
       }
     });
 
-    // Setup observer for match creation success
-    ever(controller.createdMatchId, (String matchId) {
-      if (matchId.isNotEmpty) {
-        Get.offAll(() => MatchDetailScreen(matchId: matchId));
-        controller.createdMatchId.value = '';
-      }
-    });
-
     // Setup observer for match cancellation
     ever(controller.cancelledMatchId, (String matchId) {
       if (matchId.isNotEmpty) {
@@ -52,6 +44,15 @@ class CreateMatchScreen extends StatelessWidget {
         controller.cancelledMatchId.value = '';
       }
     });
+
+    // // Setup observer for successful match creation and navigation
+    // ever(controller.createdMatchId, (String matchId) {
+    //   if (matchId.isNotEmpty) {
+    //     // Navigate to match detail screen
+    //     Get.off(() => MatchDetailScreen(matchId: matchId));
+    //     controller.createdMatchId.value = '';
+    //   }
+    // });
 
     return Scaffold(
       appBar: AppBar(

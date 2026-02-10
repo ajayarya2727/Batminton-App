@@ -4,22 +4,15 @@ import '../../services/storage_service.dart';
 import '../matches_list/my_matches_list_controller.dart';
 
 class MatchController extends GetxController {
+  // Dialog visibility flags
   final RxBool showManualServiceDialog = false.obs;
   final RxBool showContinueDialog = false.obs;
   final RxBool showRoundCompleteDialog = false.obs;
   final RxBool showNextRoundServiceDialog = false.obs;
   final RxBool showMatchCompleteDialog = false.obs;
   
-  // Pending data for dialogs
+  // Pending match for dialogs (stores current match being processed)
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
-  final RxString pendingRoundWinner = ''.obs;
-  final RxInt pendingRoundNumber = 0.obs;
-  final RxInt pendingTeam1Score = 0.obs;
-  final RxInt pendingTeam2Score = 0.obs;
-  final RxString pendingDefaultServer = ''.obs;
-  final RxString pendingMatchWinner = ''.obs;
-  final RxInt pendingTeam1Rounds = 0.obs;
-  final RxInt pendingTeam2Rounds = 0.obs;
 
   MyMatchesController get _matchesController => Get.find<MyMatchesController>();
 
@@ -56,12 +49,7 @@ class MatchController extends GetxController {
     
     final match = _matchesController.matches[matchIndex];
     
-    // Check if match can be updated
-    if (match.isCompleted || match.status == BadmintonMatchStatus.paused) return;
-    
     // If no rounds, trigger service selection
-    
-    
     if (match.currentRound == null) return;
     
     final prevPlayerScore = match.currentRound!.playerScores[playerId] ?? 0;
@@ -72,14 +60,14 @@ class MatchController extends GetxController {
     int newTeam1Score = 0;
     int newTeam2Score = 0;
     for (final player in match.team1.players) {
-      newTeam1Score += updatedPlayerScores[player.playerId] ?? 0;
+      newTeam1Score += updatedPlayerScores[player.playerId] ?? 0;//if vcalue null so use 0
     }
     for (final player in match.team2.players) {
       newTeam2Score += updatedPlayerScores[player.playerId] ?? 0;
     }
     
-    final prevTeam1Score = match.team1Score;
-    final prevTeam2Score = match.team2Score;
+    final previousTeam1Score = match.team1Score;
+    final previousTeam2Score = match.team2Score;
     
     // Update point sequence and server
     List<String> updatedPointSequence = List<String>.from(match.currentRound!.pointSequence);
@@ -125,8 +113,8 @@ class MatchController extends GetxController {
     // Check for 21 points milestone
     bool showPopup = false;
     if (!match.milestone21Reached) {
-      if ((newTeam1Score == 21 && prevTeam1Score < 21) || 
-          (newTeam2Score == 21 && prevTeam2Score < 21)) {
+      if ((newTeam1Score == 21 && previousTeam1Score < 21) || 
+          (newTeam2Score == 21 && previousTeam2Score < 21)) {
         showPopup = true;
       }
     }
@@ -134,8 +122,6 @@ class MatchController extends GetxController {
     if (showPopup) {
       _matchesController.matches[matchIndex] = _matchesController.matches[matchIndex].markMilestone21Reached();
       pendingMatch.value = _matchesController.matches[matchIndex];
-      pendingTeam1Score.value = newTeam1Score;
-      pendingTeam2Score.value = newTeam2Score;
       showContinueDialog.value = true;
     } else {
       await StorageService.saveMatch(_matchesController.matches[matchIndex]);
@@ -152,25 +138,21 @@ class MatchController extends GetxController {
     _matchesController.matches[matchIndex] = updatedMatch;
     await StorageService.saveMatch(updatedMatch);
     
+    // Store match for dialog display
+    pendingMatch.value = updatedMatch;
+    
     if (updatedMatch.isMatchComplete) {
-      pendingMatch.value = updatedMatch;
-      pendingMatchWinner.value = updatedMatch.matchWinner!;
-      pendingTeam1Rounds.value = updatedMatch.team1RoundsWon;
-      pendingTeam2Rounds.value = updatedMatch.team2RoundsWon;
+      // Match is complete - show match complete dialog
       showMatchCompleteDialog.value = true;
     } else {
-      pendingMatch.value = updatedMatch;
-      pendingRoundWinner.value = roundWinner;
-      pendingRoundNumber.value = match.currentRoundNumber;
-      pendingTeam1Score.value = team1Score;
-      pendingTeam2Score.value = team2Score;
+      // Round complete but match continues - show round complete dialog
       showRoundCompleteDialog.value = true;
     }
   }
 
   // Start next round with default server
   Future<void> startNextRound(String matchId) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];
@@ -180,7 +162,7 @@ class MatchController extends GetxController {
 
   // Start next round with custom server
   Future<void> startNextRoundWithService(String matchId, String initialServer) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
     final match = _matchesController.matches[matchIndex];
@@ -196,7 +178,6 @@ class MatchController extends GetxController {
     final nextRound = BadmintonRoundModel(
       roundNumber: nextRoundNumber,
       status: BadmintonRoundStatus.inProgress,
-      startedAt: DateTime.now(),
       initialServer: initialServer,
       currentServer: initialServer,
       pointSequence: [],
@@ -250,17 +231,15 @@ class MatchController extends GetxController {
   }
 
   // Trigger dialogs (called by UI)
-
   void triggerManualServiceDialog(BadmintonMatchModel match) {
     pendingMatch.value = match;
     showManualServiceDialog.value = true;
   }
 
-  void triggerNextRoundServiceDialog(String matchId, String defaultServer) {
+  void triggerNextRoundServiceDialog(String matchId) {
     final match = _matchesController.getMatchById(matchId);
     if (match != null) {
       pendingMatch.value = match;
-      pendingDefaultServer.value = defaultServer;
       showNextRoundServiceDialog.value = true;
     }
   }
