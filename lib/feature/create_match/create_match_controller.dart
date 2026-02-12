@@ -65,7 +65,6 @@ class CreateMatchController extends GetxController {
   Future<void> createMatch() async {
     final team1Name = team1NameController.text.trim();
     final team2Name = team2NameController.text.trim();
-    print("hello ajay");
     if (team1Name.isEmpty) {
       errorMessage.value = 'Please enter Team 1 name';
       return;
@@ -75,7 +74,7 @@ class CreateMatchController extends GetxController {
       errorMessage.value = 'Please enter Team 2 name';
       return;
     }
-    print("ajay is busy");
+
     final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
     
     // Get player names from Team 1 (loop will run requiredPlayers times)
@@ -84,10 +83,8 @@ class CreateMatchController extends GetxController {
       String name = team1PlayerNameBox[i].text.trim();
       if (name.isNotEmpty) {
         team1Players.add(name);
-            print("check $name $i");
 
       }
-          print("check 2 after $name $i");
 
     }
 
@@ -97,11 +94,8 @@ class CreateMatchController extends GetxController {
       String name = team2PlayerNameBox[i].text.trim();
       if (name.isNotEmpty) {
         team2Players.add(name);
-        print("check team 2 $name $i");
       }
-      print("check after team 2 $name $i");
     }
-    print("nainital");
 
     if (team1Players.length != requiredPlayers) {
       errorMessage.value = 'Please enter all player name for Team 1';
@@ -115,8 +109,7 @@ class CreateMatchController extends GetxController {
 
     try {
       isCreating.value = true;
-      
-          print("haldwani");
+    
 
       // Generate unique IDs using current timestamp
       final matchId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -170,11 +163,8 @@ class CreateMatchController extends GetxController {
         createdAt: DateTime.now(),
       );
 
-          print("there are sone error");
-
 
       await Get.find<MyMatchesController>().addMatch(match);
-          print("there are error?");
 
       pendingMatch.value = match;
       showServiceDialog.value = true;
@@ -184,7 +174,6 @@ class CreateMatchController extends GetxController {
     } finally {
       isCreating.value = false;
     }
-        print("kashipur");
 
   }
            
