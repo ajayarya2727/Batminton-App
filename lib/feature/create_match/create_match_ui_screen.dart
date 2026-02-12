@@ -12,8 +12,8 @@ class CreateMatchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final CreateMatchController controller = Get.put(CreateMatchController());
-    // Get.put(MatchController());
-    // Get.put(MyMatchesController());
+    Get.put(MatchController());
+    Get.put(MyMatchesController());
 
     // Setup observers for error messages
     ever(controller.errorMessage, (String message) {
@@ -40,7 +40,7 @@ class CreateMatchScreen extends StatelessWidget {
     // Setup observer for match cancellation
     ever(controller.cancelledMatchId, (String matchId) {
       if (matchId.isNotEmpty) {
-        Get.back();
+        Get.back(); // Go back to previous screen
         controller.cancelledMatchId.value = '';
       }
     });
@@ -48,8 +48,7 @@ class CreateMatchScreen extends StatelessWidget {
     // Setup observer for successful match creation and navigation
     ever(controller.createdMatchId, (String matchId) {
       if (matchId.isNotEmpty) {
-        // Navigate to match detail screen
-        Get.off(() => MatchDetailScreen(matchId: matchId));
+        Get.off(() => MatchDetailScreen(matchId: matchId)); // Replace current screen with match screen
         controller.createdMatchId.value = '';
       }
     });
@@ -62,7 +61,6 @@ class CreateMatchScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
-        // elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -216,7 +214,6 @@ class CreateMatchScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: teamColor.shade600),
                 ),
-                // prefixIcon: Icon(Icons.group, color: teamColor.shade600),
               ),
               textCapitalization: TextCapitalization.words,
             ),
@@ -238,7 +235,7 @@ class CreateMatchScreen extends StatelessWidget {
                 itemCount: availableLogos.length,
                 itemBuilder: (context, index) {
                   final logo = availableLogos[index];
-                  return Obx(() => GestureDetector( //anything tapable
+                  return Obx(() => GestureDetector(
                     onTap: () => teamLogo.value = logo,
                     child: Container(
                       width: 50,
@@ -366,6 +363,60 @@ class CreateMatchScreen extends StatelessWidget {
     CreateMatchController controller,
     BadmintonMatchModel match,
   ) {
+    // Build Team 1 player buttons
+    List<Widget> team1PlayerButtons = [];
+    for (int i = 0; i < match.team1.players.length; i++) {
+      final player = match.team1.players[i];
+      team1PlayerButtons.add(
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ElevatedButton(
+            onPressed: () {
+              Get.back(); // Close dialog
+              controller.initializeMatchAndNavigate(match.matchId, player.playerId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(
+              player.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Build Team 2 player buttons
+    List<Widget> team2PlayerButtons = [];
+    for (int i = 0; i < match.team2.players.length; i++) {
+      final player = match.team2.players[i];
+      team2PlayerButtons.add(
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ElevatedButton(
+            onPressed: () {
+              Get.back(); // Close dialog
+              controller.initializeMatchAndNavigate(match.matchId, player.playerId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Text(
+              player.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      );
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -404,25 +455,7 @@ class CreateMatchScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...match.team1.players.map((player) => Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop();
-                          controller.initializeMatchAndNavigate(match.matchId, player.playerId);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(
-                          player.name,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    )),
+                    ...team1PlayerButtons,
                   ],
                 ),
               ),
@@ -456,25 +489,7 @@ class CreateMatchScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...match.team2.players.map((player) => Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop();
-                          controller.initializeMatchAndNavigate(match.matchId, player.playerId);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade600,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(
-                          player.name,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    )),
+                    ...team2PlayerButtons,
                   ],
                 ),
               ),
@@ -486,7 +501,7 @@ class CreateMatchScreen extends StatelessWidget {
                 width: double.infinity,
                 child: TextButton.icon(
                   onPressed: () {
-                    Navigator.of(dialogContext).pop();
+                    Get.back(); // Close dialog
                     controller.cancelMatchCreation(match.matchId);
                   },
                   style: TextButton.styleFrom(

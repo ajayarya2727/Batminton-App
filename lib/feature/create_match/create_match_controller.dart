@@ -35,26 +35,37 @@ class CreateMatchController extends GetxController {
   }
 
   void updatePlayerNameBox(int playersPerTeam) {
-    for (var controller in team1PlayerNameBox) {
-      controller.dispose();
-    }
-    for (var controller in team2PlayerNameBox) {
-      controller.dispose();
+    // If already correct number of boxes, do nothing
+    if (team1PlayerNameBox.length == playersPerTeam) {
+      return;
     }
 
-    team1PlayerNameBox.clear();
-    team2PlayerNameBox.clear();
+    // If need more boxes, add them
+    if (team1PlayerNameBox.length < playersPerTeam) {
+      int needMore = playersPerTeam - team1PlayerNameBox.length;
+      for (int i = 0; i < needMore; i++) {
+        team1PlayerNameBox.add(TextEditingController());
+        team2PlayerNameBox.add(TextEditingController());
+      }
+      return;
+    }
 
-    for (int i = 0; i < playersPerTeam; i++) {
-      team1PlayerNameBox.add(TextEditingController());
-      team2PlayerNameBox.add(TextEditingController());
+    // If need less boxes, remove extra ones
+    if (team1PlayerNameBox.length > playersPerTeam) {
+      int removeCount = team1PlayerNameBox.length - playersPerTeam;
+      for (int i = 0; i < removeCount; i++) {
+        team1PlayerNameBox.last.dispose();
+        team1PlayerNameBox.removeLast();
+        team2PlayerNameBox.last.dispose();
+        team2PlayerNameBox.removeLast();
+      }
     }
   }
 
   Future<void> createMatch() async {
     final team1Name = team1NameController.text.trim();
     final team2Name = team2NameController.text.trim();
-    
+    print("hello ajay");
     if (team1Name.isEmpty) {
       errorMessage.value = 'Please enter Team 1 name';
       return;
@@ -64,83 +75,107 @@ class CreateMatchController extends GetxController {
       errorMessage.value = 'Please enter Team 2 name';
       return;
     }
+    print("ajay is busy");
+    final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
     
+    // Get player names from Team 1 (loop will run requiredPlayers times)
     List<String> team1Players = [];
-    for (var nameBox  in team1PlayerNameBox) {
-      String name = nameBox.text.trim();
+    for (int i = 0; i < team1PlayerNameBox.length; i++) {
+      String name = team1PlayerNameBox[i].text.trim();
       if (name.isNotEmpty) {
-        team1Players.add(name); 
+        team1Players.add(name);
+            print("check $name $i");
+
       }
+          print("check 2 after $name $i");
+
     }
 
+    // Get player names from Team 2 (loop will run requiredPlayers times)
     List<String> team2Players = [];
-    for (var nameBox  in team2PlayerNameBox) {
-      String name = nameBox .text.trim();
+    for (int i = 0; i < team2PlayerNameBox.length; i++) {
+      String name = team2PlayerNameBox[i].text.trim();
       if (name.isNotEmpty) {
         team2Players.add(name);
+        print("check team 2 $name $i");
       }
+      print("check after team 2 $name $i");
     }
-
-    final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
+    print("nainital");
 
     if (team1Players.length != requiredPlayers) {
-      errorMessage.value = 'Please enter all player names for ';
+      errorMessage.value = 'Please enter all player name for Team 1';
       return;
     }
 
     if (team2Players.length != requiredPlayers) {
-      errorMessage.value = 'Please enter all player names for ';
+      errorMessage.value = 'Please enter all player name for Team 2';
       return;
     }
 
     try {
       isCreating.value = true;
       
-      final now = DateTime.now();
-      final matchId = now.millisecondsSinceEpoch.toString();
-      final team1Timestamp = now.add(Duration(milliseconds: 1)).millisecondsSinceEpoch;
-      final team2Timestamp = now.add(Duration(milliseconds: 2)).millisecondsSinceEpoch;
-      final playerBaseTimestamp = now.add(Duration(milliseconds: 3)).millisecondsSinceEpoch;
+          print("haldwani");
+
+      // Generate unique IDs using current timestamp
+      final matchId = DateTime.now().millisecondsSinceEpoch.toString();
+      final team1Id = DateTime.now().millisecondsSinceEpoch;
+      final team2Id = DateTime.now().millisecondsSinceEpoch;
       
-      final team1 = BadmintonTeamModel( //create BadmintonTeamModel object
-        teamId: 'team_$team1Timestamp',
+      // Create Team 1 players list with unique timestamp IDs
+      List<BadmintonPlayerModel> team1PlayersList = [];
+      for (int i = 0; i < team1Players.length; i++) {
+        final playerId = DateTime.now().microsecondsSinceEpoch.toString();
+        team1PlayersList.add(
+          BadmintonPlayerModel(
+            playerId: playerId,
+            name: team1Players[i],
+          )
+        );
+      }
+      
+      final team1 = BadmintonTeamModel(
+        teamId: 'team_$team1Id',
         teamName: team1Name,
         teamLogo: team1Logo.value,
-        players: team1Players.asMap().entries.map((entry) => 
-          BadmintonPlayerModel(
-            playerId: 'player_${playerBaseTimestamp + entry.key + 1}',
-            name: entry.value,
-          )
-        ).toList(),
+        players: team1PlayersList,
       );
+      
+      // Create Team 2 players list with unique timestamp IDs
+      List<BadmintonPlayerModel> team2PlayersList = [];
+      for (int i = 0; i < team2Players.length; i++) {
+        final playerId = DateTime.now().microsecondsSinceEpoch.toString();
+        team2PlayersList.add(
+          BadmintonPlayerModel(
+            playerId: playerId,
+            name: team2Players[i],
+          )
+        );
+      }
       
       final team2 = BadmintonTeamModel(
-        teamId: 'team_$team2Timestamp',
+        teamId: 'team_$team2Id',
         teamName: team2Name,
         teamLogo: team2Logo.value,
-        players: team2Players.asMap().entries.map((entry) => 
-          BadmintonPlayerModel(
-            playerId: 'player_${playerBaseTimestamp + entry.key + 1}',
-            name: entry.value,
-          )
-        ).toList(),
+        players: team2PlayersList,
       );
       
-      final actualMatchType = team1Players.length == 1 && team2Players.length == 1 
-          ? BadmintonMatchType.singles 
-          : BadmintonMatchType.doubles;
-      print('actual match type,$actualMatchType');
-      // Create Match with teams and match type
+      // Create Match with user's selected match type
       final match = BadmintonMatchModel(
         matchId: matchId,
-        matchType: actualMatchType,
+        matchType: selectedMatchType.value,
         team1: team1,
         team2: team2,
         createdAt: DateTime.now(),
       );
 
+          print("there are sone error");
+
+
       await Get.find<MyMatchesController>().addMatch(match);
-      
+          print("there are error?");
+
       pendingMatch.value = match;
       showServiceDialog.value = true;
       
@@ -149,30 +184,25 @@ class CreateMatchController extends GetxController {
     } finally {
       isCreating.value = false;
     }
-  }
+        print("kashipur");
 
-   //create match an round
+  }
+           
+
+  // Start match with selected server
   Future<void> initializeMatchAndNavigate(String matchId, String initialServer) async {
     try {
+      // Initialize match with first server
       await Get.find<MatchController>().initializeMatchWithService(matchId, initialServer);
       
-      final myMatchesController = Get.find<MyMatchesController>();
-      int attempts = 0;
-      while (attempts < 10) {
-        final match = myMatchesController.getMatchById(matchId);
-        if (match != null && match.rounds.isNotEmpty) {
-          break;
-        }
-        await Future.delayed(const Duration(milliseconds: 50));
-        attempts++;
-      }
-      
+      // Match is ready, navigate to match screen
       createdMatchId.value = matchId;
       
     } catch (e) {
       errorMessage.value = 'Failed to initialize match. Please try again.';
     }
   }
+
 
   Future<void> cancelMatchCreation(String matchId) async {
     try {

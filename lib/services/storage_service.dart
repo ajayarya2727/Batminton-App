@@ -19,7 +19,7 @@ class StorageService {
   }
   
   /// Save a match to its JSON file
-  static Future<void> saveMatch(BadmintonMatchModel match) async {
+  static Future<void> saveMatchToStorage(BadmintonMatchModel match) async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matchFile = File('${matchesDir.path}/${match.matchId}.json');
@@ -32,7 +32,7 @@ class StorageService {
   }
   
   /// Load a single match by ID
-  static Future<BadmintonMatchModel?> loadMatch(String matchId) async {
+  static Future<BadmintonMatchModel?> getMatchById(String matchId) async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matchFile = File('${matchesDir.path}/$matchId.json');
@@ -51,7 +51,7 @@ class StorageService {
   }
   
   /// Load all matches from storage
-  static Future<List<BadmintonMatchModel>> loadAllMatches() async {
+  static Future<List<BadmintonMatchModel>> getAllMatchesFromStorage() async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matches = <BadmintonMatchModel>[];
@@ -83,7 +83,7 @@ class StorageService {
   }
   
   /// Delete a match file
-  static Future<void> deleteMatch(String matchId) async {
+  static Future<void> deleteMatchFromStorage(String matchId) async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matchFile = File('${matchesDir.path}/$matchId.json');
@@ -97,7 +97,7 @@ class StorageService {
   }
   
   /// Check if a match exists
-  static Future<bool> matchExists(String matchId) async {
+  static Future<bool> checkIfMatchExists(String matchId) async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matchFile = File('${matchesDir.path}/$matchId.json');
@@ -108,7 +108,7 @@ class StorageService {
   }
   
   /// Get all match IDs
-  static Future<List<String>> getAllMatchIds() async {
+  static Future<List<String>> getAllMatchIdsFromStorage() async {
     try {
       final matchesDir = await _getMatchesDirectory();
       final matchIds = <String>[];
@@ -134,7 +134,7 @@ class StorageService {
   }
   
   /// Clear all matches (use with caution)
-  static Future<void> clearAllMatches() async {
+  static Future<void> deleteAllMatchesFromStorage() async {
     try {
       final matchesDir = await _getMatchesDirectory();
       

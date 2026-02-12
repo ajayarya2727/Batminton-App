@@ -14,40 +14,40 @@ class MatchController extends GetxController {
   // Pending match for dialogs (stores current match being processed)
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
 
-  MyMatchesController get _matchesController => Get.find<MyMatchesController>();
+  MyMatchesController get _allmatcheslist => Get.find<MyMatchesController>();
 
   // Initialize match with first server
   Future<void> initializeMatchWithService(String matchId, String initialServer) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
-    _matchesController.matches[matchIndex] = match.initializeFirstRound(initialServer: initialServer);
-    await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+    final match = _allmatcheslist.matches[matchIndex];
+    _allmatcheslist.matches[matchIndex] = match.initializeFirstRound(initialServer: initialServer);
+    await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
   }
 
   // Manually change server during match
   Future<void> manuallySetService(String matchId, String servingPlayerId) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     if (match.currentRound == null) return;
     
     final updatedRound = match.currentRound!.copyWith(currentServer: servingPlayerId);
     final updatedmatchRounds = List<BadmintonRoundModel>.from(match.rounds);
     updatedmatchRounds[match.currentRoundNumber - 1] = updatedRound;
     
-    _matchesController.matches[matchIndex] = match.copyWith(rounds: updatedmatchRounds);
-    await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+    _allmatcheslist.matches[matchIndex] = match.copyWith(rounds: updatedmatchRounds);
+    await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
   }
 
   // Update player score and handle game logic
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     
     // If no rounds, trigger service selection
     if (match.currentRound == null) return;
@@ -100,12 +100,12 @@ class MatchController extends GetxController {
     
     final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
     updatedRounds[match.currentRoundNumber - 1] = updatedRound;
-    _matchesController.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
+    _allmatcheslist.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
     
     // Check for 30 points (round complete)
     if (newTeam1Score == 30 || newTeam2Score == 30) {
       final roundWinner = newTeam1Score == 30 ? 'team1' : 'team2';
-      await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+      await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
       await completeCurrentRound(matchId, roundWinner, newTeam1Score, newTeam2Score);
       return;
     }
@@ -120,23 +120,23 @@ class MatchController extends GetxController {
     }
     
     if (showPopup) {
-      _matchesController.matches[matchIndex] = _matchesController.matches[matchIndex].markMilestone21Reached();
-      pendingMatch.value = _matchesController.matches[matchIndex];
+      _allmatcheslist.matches[matchIndex] = _allmatcheslist.matches[matchIndex].markMilestone21Reached();
+      pendingMatch.value = _allmatcheslist.matches[matchIndex];
       showContinueDialog.value = true;
     } else {
-      await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+      await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
     }
   }
 
   // Complete current round
   Future<void> completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     final updatedMatch = match.completeCurrentRound(roundWinner);
-    _matchesController.matches[matchIndex] = updatedMatch;
-    await StorageService.saveMatch(updatedMatch);
+    _allmatcheslist.matches[matchIndex] = updatedMatch;
+    await StorageService.saveMatchToStorage(updatedMatch);
     
     // Store match for dialog display
     pendingMatch.value = updatedMatch;
@@ -152,20 +152,20 @@ class MatchController extends GetxController {
 
   // Start next round with default server
   Future<void> startNextRound(String matchId) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
-    _matchesController.matches[matchIndex] = match.startNextRound();
-    await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+    final match = _allmatcheslist.matches[matchIndex];
+    _allmatcheslist.matches[matchIndex] = match.startNextRound();
+    await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
   }
 
   // Start next round with custom server
   Future<void> startNextRoundWithService(String matchId, String initialServer) async {
-    final matchIndex = _matchesController.matches.indexWhere((match) => match.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     if (match.isMatchComplete || match.currentRoundNumber >= 3) return;
     
     final nextRoundNumber = match.currentRoundNumber + 1;
@@ -185,49 +185,49 @@ class MatchController extends GetxController {
     );
     
     final updatedRounds = List<BadmintonRoundModel>.from(match.rounds)..add(nextRound);
-    _matchesController.matches[matchIndex] = match.copyWith(
+    _allmatcheslist.matches[matchIndex] = match.copyWith(
       rounds: updatedRounds,
       currentRoundNumber: nextRoundNumber,
     );
     
-    await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+    await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
   }
 
   // Pause match
   Future<void> pauseMatch(String matchId) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((m) => m.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     if (match.status == BadmintonMatchStatus.inProgress) {
-      _matchesController.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.paused);
-      await StorageService.saveMatch(_matchesController.matches[matchIndex]);
-      _matchesController.matches.refresh();
+      _allmatcheslist.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.paused);
+      await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
+      _allmatcheslist.matches.refresh();
     }
   }
 
   // Resume match
   Future<void> resumeMatch(String matchId) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((m) => m.matchId == matchId);
     if (matchIndex == -1) return;
     
-    final match = _matchesController.matches[matchIndex];
+    final match = _allmatcheslist.matches[matchIndex];
     if (match.status == BadmintonMatchStatus.paused) {
-      _matchesController.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.inProgress);
-      await StorageService.saveMatch(_matchesController.matches[matchIndex]);
-      _matchesController.matches.refresh();
+      _allmatcheslist.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.inProgress);
+      await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
+      _allmatcheslist.matches.refresh();
     }
   }
 
   // Manually complete match
   Future<void> completeMatch(String matchId) async {
-    final matchIndex = _matchesController.matches.indexWhere((m) => m.matchId == matchId);
+    final matchIndex = _allmatcheslist.matches.indexWhere((m) => m.matchId == matchId);
     if (matchIndex == -1) return;
     
-    _matchesController.matches[matchIndex] = _matchesController.matches[matchIndex].copyWith(
+    _allmatcheslist.matches[matchIndex] = _allmatcheslist.matches[matchIndex].copyWith(
       status: BadmintonMatchStatus.completed
     );
-    await StorageService.saveMatch(_matchesController.matches[matchIndex]);
+    await StorageService.saveMatchToStorage(_allmatcheslist.matches[matchIndex]);
   }
 
   // Trigger dialogs (called by UI)
@@ -237,7 +237,7 @@ class MatchController extends GetxController {
   }
 
   void triggerNextRoundServiceDialog(String matchId) {
-    final match = _matchesController.getMatchById(matchId);
+    final match = _allmatcheslist.getMatchById(matchId);
     if (match != null) {
       pendingMatch.value = match;
       showNextRoundServiceDialog.value = true;

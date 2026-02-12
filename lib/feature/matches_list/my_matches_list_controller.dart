@@ -29,7 +29,7 @@ class MyMatchesController extends GetxController {
       isLoading.value = true;
       
       // load from new JSON file storage first
-      final loadedMatches = await StorageService.loadAllMatches();
+      final loadedMatches = await StorageService.getAllMatchesFromStorage();
       
       if (loadedMatches.isNotEmpty) {
         matches.value = loadedMatches;
@@ -45,7 +45,7 @@ class MyMatchesController extends GetxController {
           
           // Save each match to individual files
           for (final match in oldMatches) {
-            await StorageService.saveMatch(match);
+            await StorageService.saveMatchToStorage(match);
           }
           
           // Clear old storage
@@ -61,25 +61,6 @@ class MyMatchesController extends GetxController {
     }
   }
 
-  // Save matches to individual JSON files
-  Future<void> saveMatches() async {
-    try {
-      // Save all matches to individual files
-      for (final match in matches) {
-        await StorageService.saveMatch(match);
-      }
-    } catch (e) {
-      errorMessage.value = 'Failed to save matches: $e';
-    }
-  }
-
-  // Add new match
-  Future<void> addMatch(BadmintonMatchModel match) async {
-    matches.add(match);
-    await StorageService.saveMatch(match);
-    successMessage.value = 'Match created successfully!';
-  }
-
   // Get match by ID
   BadmintonMatchModel? getMatchById(String id) {
     try {
@@ -89,23 +70,20 @@ class MyMatchesController extends GetxController {
     }
   }
 
-  // Update match in the list (for when match data changes)
-  void updateMatch(BadmintonMatchModel updatedMatch) {
-    final index = matches.indexWhere((match) => match.matchId == updatedMatch.matchId);
-    if (index != -1) {
-      matches[index] = updatedMatch;
-    }
+  // Add new match (used by CreateMatchController)
+  Future<void> addMatch(BadmintonMatchModel match) async {
+    print("2");
+    matches.add(match);
+    print("1");
+    await StorageService.saveMatchToStorage(match);
+    successMessage.value = 'Match created successfully!';
   }
 
-  // Delete match
+  // Delete match (used by CreateMatchController for cancellation)
   Future<void> deleteMatch(String matchId) async {
     try {
-      // Remove from list
       matches.removeWhere((match) => match.matchId == matchId);
-      
-      // Delete from storage
-      await StorageService.deleteMatch(matchId);
-      
+      await StorageService.deleteMatchFromStorage(matchId);
       successMessage.value = 'Match deleted successfully!';
     } catch (e) {
       errorMessage.value = 'Failed to delete match';

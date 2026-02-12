@@ -22,7 +22,7 @@ class ResumeMatchController extends GetxController {
       isLoading.value = true;
       errorMessage.value = ''; 
       
-      final loadedMatches = await StorageService.loadAllMatches();
+      final loadedMatches = await StorageService.getAllMatchesFromStorage();
       _allMatches.value = loadedMatches;
     } catch (e) {
       errorMessage.value = 'Failed to load matches';
