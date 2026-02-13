@@ -172,7 +172,7 @@ class MatchController extends GetxController {
       showMatchCompleteDialog.value = true;
     } else {
       // Round complete but match continues - show compact summary
-      debugPrint('🏆 ROUND ${updatedMatch.currentRoundNumber} COMPLETE: Winner=$roundWinner | Team1 Rounds Won=${updatedMatch.team1RoundsWon}, Team2 Rounds Won=${updatedMatch.team2RoundsWon}');
+      debugPrint('ROUND ${updatedMatch.currentRoundNumber} COMPLETE: Winner=$roundWinner | Team1 Rounds Won=${updatedMatch.team1RoundsWon}, Team2 Rounds Won=${updatedMatch.team2RoundsWon}');
       
       // Round complete but match continues - show round complete dialog
       showRoundCompleteDialog.value = true;
