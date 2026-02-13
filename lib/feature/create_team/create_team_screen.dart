@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'create_team_controller.dart';
+import '../../controllers/app_controllers.dart';
 
 class CreateTeamScreen extends StatelessWidget {
   const CreateTeamScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final CreateTeamController controller = Get.put(CreateTeamController());
+    // Controller already initialized in AppControllers
+    final controller = AppControllers.createTeam;
 
     return Scaffold(
       appBar: AppBar(

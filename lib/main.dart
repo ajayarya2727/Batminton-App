@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'home_screen/home_menu_ui.dart';
+import 'controllers/app_controllers.dart';
 
 void main() {
+  // Initialize all controllers at app startup
+  // This ensures controllers are ready before any screen uses them
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Force initialization of AppControllers
+  AppControllers.createMatch;
+  AppControllers.match;
+  AppControllers.myMatches;
+  AppControllers.resumeMatch;
+  AppControllers.createTeam;
+  
   runApp(const MyApp());
 }
 

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'match_rule_controller.dart';
-import '../matches_list/my_matches_list_controller.dart';
 import '../../models/badminton_models.dart';
 import '../matches_list/matches_list_ui_screen.dart';
+import '../../controllers/app_controllers.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final String matchId;
@@ -12,85 +11,76 @@ class MatchDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MatchController matchcontroller = Get.put(MatchController());
-    final MyMatchesController myMatchesController = Get.put(MyMatchesController());
+    // Controllers already initialized in AppControllers
     
-    ever(matchcontroller.showManualServiceDialog, (bool show) {
-  if (show && matchcontroller.pendingMatch.value != null) {
+    ever(AppControllers.match.showManualServiceDialog, (bool show) {
+  if (show && AppControllers.match.pendingMatch.value != null) {
     _showManualServiceSelectionDialog(
       context,
-      matchcontroller,
-      matchcontroller.pendingMatch.value!,
+      AppControllers.match.pendingMatch.value!,
     );
-    matchcontroller.showManualServiceDialog.value = false;
+    AppControllers.match.showManualServiceDialog.value = false;
   }
 });
 
-    ever(matchcontroller.showContinueDialog, (bool show) {
-      if (show && matchcontroller.pendingMatch.value != null) {
-        final match = matchcontroller.pendingMatch.value!;
+    ever(AppControllers.match.showContinueDialog, (bool show) {
+      if (show && AppControllers.match.pendingMatch.value != null) {
+        final match = AppControllers.match.pendingMatch.value!;
         _showContinueDialog(
           context,
-          matchcontroller,
-          myMatchesController,
           matchId,
           match.team1Score,  // Directly from match
           match.team2Score,  // Directly from match
         );
-        matchcontroller.showContinueDialog.value = false;
+        AppControllers.match.showContinueDialog.value = false;
       }
     });
 
-    ever(matchcontroller.showRoundCompleteDialog, (bool show) {
-      if (show && matchcontroller.pendingMatch.value != null) {
-        final match = matchcontroller.pendingMatch.value!;
+    ever(AppControllers.match.showRoundCompleteDialog, (bool show) {
+      if (show && AppControllers.match.pendingMatch.value != null) {
+        final match = AppControllers.match.pendingMatch.value!;
         // Get the last completed round to find winner
         final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
         final roundWinner = lastCompletedRound.winnerId ?? '';
         
         _showRoundCompleteDialog(
           context,
-          matchcontroller,
-          myMatchesController,
           matchId,
           roundWinner,                    // From last completed round
           lastCompletedRound.roundNumber, // From last completed round
           lastCompletedRound.team1Score,  // From last completed round
           lastCompletedRound.team2Score,  // From last completed round
         );
-        matchcontroller.showRoundCompleteDialog.value = false;
+        AppControllers.match.showRoundCompleteDialog.value = false;
       }
     });
 
-    ever(matchcontroller.showNextRoundServiceDialog, (bool show) {
-      if (show && matchcontroller.pendingMatch.value != null) {
-        final match = matchcontroller.pendingMatch.value!;
+    ever(AppControllers.match.showNextRoundServiceDialog, (bool show) {
+      if (show && AppControllers.match.pendingMatch.value != null) {
+        final match = AppControllers.match.pendingMatch.value!;
         // Get the last completed round winner as default server
         final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
         final defaultServer = lastCompletedRound.winnerId ?? '';
         
         _showNextRoundServiceDialog(
           context,
-          matchcontroller,
-          myMatchesController,
           matchId,
           defaultServer,  // From last completed round winner
         );
-        matchcontroller.showNextRoundServiceDialog.value = false;
+        AppControllers.match.showNextRoundServiceDialog.value = false;
       }
     });
 
-    ever(matchcontroller.showMatchCompleteDialog, (bool show) {
-      if (show && matchcontroller.pendingMatch.value != null) {
-        final match = matchcontroller.pendingMatch.value!;
+    ever(AppControllers.match.showMatchCompleteDialog, (bool show) {
+      if (show && AppControllers.match.pendingMatch.value != null) {
+        final match = AppControllers.match.pendingMatch.value!;
         _showMatchCompleteDialog(
           context,
-          myMatchesController,
           match.matchWinner ?? '',  // Directly from match
           match.team1RoundsWon,     // Directly from match
           match.team2RoundsWon,     // Directly from match
         );
-        matchcontroller.showMatchCompleteDialog.value = false;
+        AppControllers.match.showMatchCompleteDialog.value = false;
       }
     });
 
@@ -113,7 +103,7 @@ class MatchDetailScreen extends StatelessWidget {
 
       ),
       body: Obx(() {
-        final match = myMatchesController.getMatchById(matchId);
+        final match = AppControllers.myMatches.getMatchById(matchId);
         
         if (match == null) {
           return const Center(
@@ -136,19 +126,19 @@ class MatchDetailScreen extends StatelessWidget {
                 _buildRoundHistory(match),
                 const SizedBox(height: 24),
               ],
-              _buildScoreSection(match, matchcontroller),
+              _buildScoreSection(match),
               const SizedBox(height: 24),
               // Add manual service selection button for in-progress matches
-              if (!match.isCompleted && match.rounds.isNotEmpty) _buildManualServiceButton(match, matchcontroller),
+              if (!match.isCompleted && match.rounds.isNotEmpty) _buildManualServiceButton(match),
               const SizedBox(height: 16),
               // Add break/resume button for in-progress matches
-              if (!match.isCompleted) _buildBreakResumeButton(match, matchcontroller),
+              if (!match.isCompleted) _buildBreakResumeButton(match),
               const SizedBox(height: 16),
               _buildMatchInfo(match),
               const SizedBox(height: 24),
               _buildScorecard(match),
               const SizedBox(height: 24),
-              if (!match.isCompleted) _buildCompleteButton(match, matchcontroller),
+              if (!match.isCompleted) _buildCompleteButton(match),
             ],
           ),
         );
@@ -518,7 +508,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreSection(BadmintonMatchModel match, MatchController controller) {
+  Widget _buildScoreSection(BadmintonMatchModel match) {
     if (match.isCompleted) {
       return Card(
         elevation: 2,
@@ -837,7 +827,7 @@ class MatchDetailScreen extends StatelessWidget {
                               IconButton(
                                 onPressed: isPaused ? null : () {
                                   if (playerScore > 0) {
-                                    controller.updatePlayerScore(
+                                    AppControllers.match.updatePlayerScore(
                                       match.matchId,
                                       player.playerId,
                                       playerScore - 1,
@@ -865,7 +855,7 @@ class MatchDetailScreen extends StatelessWidget {
                               ),
                               IconButton(
                                 onPressed: isPaused ? null : () {
-                                  controller.updatePlayerScore(
+                                  AppControllers.match.updatePlayerScore(
                                     match.matchId,
                                     player.playerId,
                                     playerScore + 1,
@@ -953,7 +943,7 @@ class MatchDetailScreen extends StatelessWidget {
                               IconButton(
                                 onPressed: isPaused ? null : () {
                                   if (playerScore > 0) {
-                                    controller.updatePlayerScore(
+                                    AppControllers.match.updatePlayerScore(
                                       match.matchId,
                                       player.playerId,
                                       playerScore - 1,
@@ -981,7 +971,7 @@ class MatchDetailScreen extends StatelessWidget {
                               ),
                               IconButton(
                                 onPressed: isPaused ? null : () {
-                                  controller.updatePlayerScore(
+                                  AppControllers.match.updatePlayerScore(
                                     match.matchId,
                                     player.playerId,
                                     playerScore + 1,
@@ -1066,7 +1056,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildManualServiceButton(BadmintonMatchModel match, MatchController controller) {
+  Widget _buildManualServiceButton(BadmintonMatchModel match) {
     final bool isPaused = match.status == BadmintonMatchStatus.paused;
     
     // Find the current server's name by player ID
@@ -1118,7 +1108,7 @@ class MatchDetailScreen extends StatelessWidget {
                 ),
                 ElevatedButton.icon(
                   onPressed: isPaused ? null : () {
-                    controller.triggerManualServiceDialog(match);
+                    AppControllers.match.triggerManualServiceDialog(match);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade600,
@@ -1153,7 +1143,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBreakResumeButton(BadmintonMatchModel match, MatchController controller) {
+  Widget _buildBreakResumeButton(BadmintonMatchModel match) {
     final bool isPaused = match.status == BadmintonMatchStatus.paused;
     
     return SizedBox(
@@ -1161,9 +1151,9 @@ class MatchDetailScreen extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () {
           if (isPaused) {
-            controller.resumeMatch(match.matchId);
+            AppControllers.match.resumeMatch(match.matchId);
           } else {
-            _showBreakDialog(match, controller);
+            _showBreakDialog(match);
           }
         },
         style: ElevatedButton.styleFrom(
@@ -1189,7 +1179,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showBreakDialog(BadmintonMatchModel match, MatchController controller) {
+  void _showBreakDialog(BadmintonMatchModel match) {
     Get.dialog(
       AlertDialog(
         title: Row(
@@ -1250,7 +1240,7 @@ class MatchDetailScreen extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () {
               Get.back();
-              controller.pauseMatch(match.matchId);
+              AppControllers.match.pauseMatch(match.matchId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange.shade600,
@@ -1263,12 +1253,12 @@ class MatchDetailScreen extends StatelessWidget {
       ),
     );
   }
-  Widget _buildCompleteButton(BadmintonMatchModel match, MatchController controller) {
+  Widget _buildCompleteButton(BadmintonMatchModel match) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          _showCompleteDialog(match, controller);
+          _showCompleteDialog(match);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green.shade600,
@@ -1289,7 +1279,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showCompleteDialog(BadmintonMatchModel match, MatchController controller) {
+  void _showCompleteDialog(BadmintonMatchModel match) {
     Get.dialog(
       AlertDialog(
         title: const Text('Complete Match'),
@@ -1302,7 +1292,7 @@ class MatchDetailScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              controller.completeMatch(match.matchId);
+              AppControllers.match.completeMatch(match.matchId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,
@@ -1585,13 +1575,11 @@ class MatchDetailScreen extends StatelessWidget {
   // Dialog Methods
   void _showContinueDialog(
     BuildContext context,
-    MatchController matchcontroller,
-    MyMatchesController myMatchesController,
     String matchId,
     int team1Score,
     int team2Score,
   ) {
-    final match = myMatchesController.getMatchById(matchId);
+    final match = AppControllers.myMatches.getMatchById(matchId);
     if (match == null) return;
     
     final winnerPlayer = team1Score == 21 ? match.team1Players.join(' & ') : match.team2Players.join(' & ');
@@ -1634,7 +1622,7 @@ class MatchDetailScreen extends StatelessWidget {
               onPressed: () {
                 Get.back(); // Close dialog
                 final roundWinner = team1Score == 21 ? 'team1' : 'team2';
-                matchcontroller.completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
+                AppControllers.match.completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
               },
               child: const Text('No, End Round'),
             ),
@@ -1662,15 +1650,13 @@ class MatchDetailScreen extends StatelessWidget {
 
   void _showRoundCompleteDialog(
     BuildContext context,
-    MatchController matchcontroller,
-    MyMatchesController myMatchesController,
     String matchId,
     String roundWinner,
     int roundNumber,
     int team1Score,
     int team2Score,
   ) {
-    final match = myMatchesController.getMatchById(matchId);
+    final match = AppControllers.myMatches.getMatchById(matchId);
     if (match == null) return;
     
     final winnerName = roundWinner == 'team1' ? match.team1Players.join(' & ') : match.team2Players.join(' & ');
@@ -1738,14 +1724,14 @@ class MatchDetailScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Get.back(); // Close dialog
-                matchcontroller.triggerNextRoundServiceDialog(matchId);
+                AppControllers.match.triggerNextRoundServiceDialog(matchId);
               },
               child: const Text('Change Service'),
             ),
             ElevatedButton(
               onPressed: () {
                 Get.back(); // Close dialog
-                matchcontroller.startNextRound(matchId);
+                AppControllers.match.startNextRound(matchId);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade600,
@@ -1761,12 +1747,10 @@ class MatchDetailScreen extends StatelessWidget {
 
   void _showNextRoundServiceDialog(
     BuildContext context,
-    MatchController matchcontroller,
-    MyMatchesController myMatchesController,
     String matchId,
     String defaultServer,
   ) {
-    final match = myMatchesController.getMatchById(matchId);
+    final match = AppControllers.myMatches.getMatchById(matchId);
     if (match == null) return;
     
     showDialog(
@@ -1821,7 +1805,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.startNextRoundWithService(matchId, match.team1.players[i].playerId);
+                              AppControllers.match.startNextRoundWithService(matchId, match.team1.players[i].playerId);
                               Get.snackbar(
                                 'Round Started!',
                                 '${match.team1.players[i].name} will serve first',
@@ -1878,7 +1862,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.startNextRoundWithService(matchId, match.team2.players[i].playerId);
+                              AppControllers.match.startNextRoundWithService(matchId, match.team2.players[i].playerId);
                               Get.snackbar(
                                 'Round Started!',
                                 '${match.team2.players[i].name} will serve first',
@@ -1907,7 +1891,6 @@ class MatchDetailScreen extends StatelessWidget {
 
   void _showMatchCompleteDialog(
     BuildContext context,
-    MyMatchesController myMatchesController,
     String matchWinner,
     int team1Rounds,
     int team2Rounds,
@@ -2028,7 +2011,6 @@ class MatchDetailScreen extends StatelessWidget {
 
   void _showServiceSelectionDialog(
     BuildContext context,
-    MatchController matchcontroller,
     BadmintonMatchModel match,
   ) {
     showDialog(
@@ -2083,7 +2065,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.initializeMatchWithService(match.matchId, match.team1.players[i].playerId);
+                              AppControllers.match.initializeMatchWithService(match.matchId, match.team1.players[i].playerId);
                               Get.snackbar(
                                 'Match Started!',
                                 '${match.team1.players[i].name} will serve first',
@@ -2140,7 +2122,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.initializeMatchWithService(match.matchId, match.team2.players[i].playerId);
+                              AppControllers.match.initializeMatchWithService(match.matchId, match.team2.players[i].playerId);
                               Get.snackbar(
                                 'Match Started!',
                                 '${match.team2.players[i].name} will serve first',
@@ -2169,7 +2151,6 @@ class MatchDetailScreen extends StatelessWidget {
 
   void _showManualServiceSelectionDialog(
     BuildContext context,
-    MatchController matchcontroller,
     BadmintonMatchModel match,
   ) {
     showDialog(
@@ -2233,7 +2214,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.manuallySetService(match.matchId, match.team1.players[i].playerId);
+                              AppControllers.match.manuallySetService(match.matchId, match.team1.players[i].playerId);
                               Get.snackbar(
                                 'Service Changed!',
                                 '${match.team1.players[i].name} will serve next',
@@ -2305,7 +2286,7 @@ class MatchDetailScreen extends StatelessWidget {
                           child: ElevatedButton(
                             onPressed: () {
                               Get.back();
-                              matchcontroller.manuallySetService(match.matchId, match.team2.players[i].playerId);
+                              AppControllers.match.manuallySetService(match.matchId, match.team2.players[i].playerId);
                               Get.snackbar(
                                 'Service Changed!',
                                 '${match.team2.players[i].name} will serve next',

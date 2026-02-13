@@ -5,6 +5,7 @@ import '../feature/create_team/create_team_screen.dart';
 import '../feature/my_tournament/create_tournament_ui_screen.dart';
 import '../feature/resume_match/resume_matches_ui_screen.dart';
 import '../feature/matches_list/matches_list_ui_screen.dart';
+import '../controllers/reset_functions.dart';
 
 class MenuButton extends StatelessWidget {
   final String title;
@@ -68,7 +69,11 @@ class HorizontalMenu extends StatelessWidget {
               child: MenuButton(
                 title: 'CREATE MATCH',
                 color: Colors.green.shade600,
-                onTap: () => Get.to(() => const CreateMatchScreen()),
+                onTap: () {
+                  // Reset controller before opening screen
+                  ResetFunctions.resetCreateMatch();
+                  Get.to(() => const CreateMatchScreen());
+                },
               ),
             ),
             Expanded(

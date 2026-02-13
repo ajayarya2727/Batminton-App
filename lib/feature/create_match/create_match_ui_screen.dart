@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'create_match_controller.dart';
-import '../match_rule/match_rule_controller.dart';
 import '../match_rule/match_rule_ui_screen.dart';
-import '../matches_list/my_matches_list_controller.dart';
 import '../../models/badminton_models.dart';
+import '../../controllers/app_controllers.dart';
 
 class CreateMatchScreen extends StatelessWidget {
   const CreateMatchScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final CreateMatchController controller = Get.put(CreateMatchController());
-    Get.put(MatchController());
-    Get.put(MyMatchesController());
+    // Controllers already initialized in AppControllers
 
     // Setup observers for error messages
-    ever(controller.errorMessage, (String message) {
+    ever(AppControllers.createMatch.errorMessage, (String message) {
       if (message.isNotEmpty) {
         Get.snackbar(
           'Error',
@@ -25,31 +21,31 @@ class CreateMatchScreen extends StatelessWidget {
           colorText: Colors.red.shade700,
           icon: Icon(Icons.error, color: Colors.red.shade700),
         );
-        controller.errorMessage.value = '';
+        AppControllers.createMatch.errorMessage.value = '';
       }
     });
 
     // Setup observer for service dialog
-    ever(controller.showServiceDialog, (bool show) {
-      if (show && controller.pendingMatch.value != null) {
-        _showServiceSelectionDialog(context, controller, controller.pendingMatch.value!);
-        controller.showServiceDialog.value = false;
+    ever(AppControllers.createMatch.showServiceDialog, (bool show) {
+      if (show && AppControllers.createMatch.pendingMatch.value != null) {
+        _showServiceSelectionDialog(context, AppControllers.createMatch.pendingMatch.value!);
+        AppControllers.createMatch.showServiceDialog.value = false;
       }
     });
 
     // Setup observer for match cancellation
-    ever(controller.cancelledMatchId, (String matchId) {
+    ever(AppControllers.createMatch.cancelledMatchId, (String matchId) {
       if (matchId.isNotEmpty) {
         Get.back(); // Go back to previous screen
-        controller.cancelledMatchId.value = '';
+        AppControllers.createMatch.cancelledMatchId.value = '';
       }
     });
 
     // Setup observer for successful match creation and navigation
-    ever(controller.createdMatchId, (String matchId) {
+    ever(AppControllers.createMatch.createdMatchId, (String matchId) {
       if (matchId.isNotEmpty) {
         Get.off(() => MatchDetailScreen(matchId: matchId)); // Replace current screen with match screen
-        controller.createdMatchId.value = '';
+        AppControllers.createMatch.createdMatchId.value = '';
       }
     });
 
@@ -67,11 +63,11 @@ class CreateMatchScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildMatchTypeSelector(controller, context),
+            _buildMatchTypeSelector(context),
             const SizedBox(height: 24),
-            Obx(() => _buildTeamInputs(controller, context)),
+            Obx(() => _buildTeamInputs(context)),
             const SizedBox(height: 32),
-            _buildCreateButton(controller, context),
+            _buildCreateButton(context),
           ],
         ),
       ),
@@ -79,7 +75,6 @@ class CreateMatchScreen extends StatelessWidget {
   }
 
   Widget _buildMatchTypeSelector(
-    CreateMatchController controller,
     BuildContext context,
   ) {
     return Card(
@@ -106,10 +101,10 @@ class CreateMatchScreen extends StatelessWidget {
                   title: const Text('1v1'),
                   subtitle: const Text('Single player match'),
                   value: BadmintonMatchType.singles,
-                  groupValue: controller.selectedMatchType.value,
+                  groupValue: AppControllers.createMatch.selectedMatchType.value,
                   onChanged: (value) {
-                    controller.selectedMatchType.value = value!;
-                    controller.updatePlayerNameBox(1);
+                    AppControllers.createMatch.selectedMatchType.value = value!;
+                    AppControllers.createMatch.updatePlayerNameBox(1);
                   },
                   activeColor: Colors.green.shade600,
                 ),
@@ -117,10 +112,10 @@ class CreateMatchScreen extends StatelessWidget {
                   title: const Text('2v2'),
                   subtitle: const Text('Double player match'),
                   value: BadmintonMatchType.doubles,
-                  groupValue: controller.selectedMatchType.value,
+                  groupValue: AppControllers.createMatch.selectedMatchType.value,
                   onChanged: (value) {
-                    controller.selectedMatchType.value = value!;
-                    controller.updatePlayerNameBox(2);
+                    AppControllers.createMatch.selectedMatchType.value = value!;
+                    AppControllers.createMatch.updatePlayerNameBox(2);
                   },
                   activeColor: Colors.green.shade600,
                 ),
@@ -133,16 +128,15 @@ class CreateMatchScreen extends StatelessWidget {
   }
 
   Widget _buildTeamInputs(
-    CreateMatchController controller,
     BuildContext context,
   ) {
-    final int playersPerTeam = controller.selectedMatchType.value.requiredPlayersPerTeam;
+    final int playersPerTeam = AppControllers.createMatch.selectedMatchType.value.requiredPlayersPerTeam;
 
     return Column(
       children: [
-        _buildTeamCard('Team 1', controller.team1NameController, controller.team1PlayerNameBox, playersPerTeam, controller.team1Logo, Colors.blue, controller.availableLogos, context),
+        _buildTeamCard('Team 1', AppControllers.createMatch.team1NameController, AppControllers.createMatch.team1PlayerNameBox, playersPerTeam, AppControllers.createMatch.team1Logo, Colors.blue, AppControllers.createMatch.availableLogos, context),
         const SizedBox(height: 16),
-        _buildTeamCard('Team 2', controller.team2NameController, controller.team2PlayerNameBox, playersPerTeam, controller.team2Logo, Colors.green, controller.availableLogos, context),
+        _buildTeamCard('Team 2', AppControllers.createMatch.team2NameController, AppControllers.createMatch.team2PlayerNameBox, playersPerTeam, AppControllers.createMatch.team2Logo, Colors.green, AppControllers.createMatch.availableLogos, context),
       ],
     );
   }
@@ -307,14 +301,13 @@ class CreateMatchScreen extends StatelessWidget {
   }
 
   Widget _buildCreateButton(
-    CreateMatchController controller,
     BuildContext context,
   ) {
     return SizedBox(
       width: double.infinity,
       child: Obx(() => ElevatedButton(
-        onPressed: controller.isCreating.value ? null : () async {
-          await controller.createMatch();
+        onPressed: AppControllers.createMatch.isCreating.value ? null : () async {
+          await AppControllers.createMatch.createMatch();
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.green.shade600,
@@ -324,7 +317,7 @@ class CreateMatchScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: controller.isCreating.value 
+        child: AppControllers.createMatch.isCreating.value 
           ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -360,7 +353,6 @@ class CreateMatchScreen extends StatelessWidget {
   // Service selection dialog
   static void _showServiceSelectionDialog(
     BuildContext context,
-    CreateMatchController controller,
     BadmintonMatchModel match,
   ) {
     // Build Team 1 player buttons
@@ -374,7 +366,7 @@ class CreateMatchScreen extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () {
               Get.back(); // Close dialog
-              controller.initializeMatchAndNavigate(match.matchId, player.playerId);
+              AppControllers.createMatch.initializeMatchAndNavigate(match.matchId, player.playerId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade600,
@@ -401,7 +393,7 @@ class CreateMatchScreen extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () {
               Get.back(); // Close dialog
-              controller.initializeMatchAndNavigate(match.matchId, player.playerId);
+              AppControllers.createMatch.initializeMatchAndNavigate(match.matchId, player.playerId);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,
@@ -502,7 +494,7 @@ class CreateMatchScreen extends StatelessWidget {
                 child: TextButton.icon(
                   onPressed: () {
                     Get.back(); // Close dialog
-                    controller.cancelMatchCreation(match.matchId);
+                    AppControllers.createMatch.cancelMatchCreation(match.matchId);
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey.shade600,

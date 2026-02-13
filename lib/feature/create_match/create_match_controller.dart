@@ -1,3 +1,4 @@
+import 'package:batminton_app/controllers/app_controllers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../match_rule/match_rule_controller.dart';
@@ -77,25 +78,33 @@ class CreateMatchController extends GetxController {
 
     final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
     
+    // Debug: Print player box counts
+    print('DEBUG: team1PlayerNameBox.length = ${team1PlayerNameBox.length}');
+    print('DEBUG: team2PlayerNameBox.length = ${team2PlayerNameBox.length}');
+    print('DEBUG: requiredPlayers = $requiredPlayers');
+    
     // Get player names from Team 1 (loop will run requiredPlayers times)
     List<String> team1Players = [];
     for (int i = 0; i < team1PlayerNameBox.length; i++) {
       String name = team1PlayerNameBox[i].text.trim();
+      print('DEBUG: Team1 Player $i name = "$name"');
       if (name.isNotEmpty) {
         team1Players.add(name);
-
       }
-
     }
 
     // Get player names from Team 2 (loop will run requiredPlayers times)
     List<String> team2Players = [];
     for (int i = 0; i < team2PlayerNameBox.length; i++) {
       String name = team2PlayerNameBox[i].text.trim();
+      print('DEBUG: Team2 Player $i name = "$name"');
       if (name.isNotEmpty) {
         team2Players.add(name);
       }
     }
+    
+    print('DEBUG: team1Players collected = ${team1Players.length}');
+    print('DEBUG: team2Players collected = ${team2Players.length}');
 
     if (team1Players.length != requiredPlayers) {
       errorMessage.value = 'Please enter all player name for Team 1';
@@ -112,14 +121,15 @@ class CreateMatchController extends GetxController {
     
 
       // Generate unique IDs using current timestamp
-      final matchId = DateTime.now().millisecondsSinceEpoch.toString();
-      final team1Id = DateTime.now().millisecondsSinceEpoch;
-      final team2Id = DateTime.now().millisecondsSinceEpoch;
+      final baseTimestamp = DateTime.now().millisecondsSinceEpoch;
+      final matchId = baseTimestamp.toString();
+      final team1Id = baseTimestamp;
+      final team2Id = baseTimestamp + 1;
       
       // Create Team 1 players list with unique timestamp IDs
       List<BadmintonPlayerModel> team1PlayersList = [];
       for (int i = 0; i < team1Players.length; i++) {
-        final playerId = DateTime.now().microsecondsSinceEpoch.toString();
+        final playerId = '${baseTimestamp}_t1_p${i}'; // Unique ID with counter
         team1PlayersList.add(
           BadmintonPlayerModel(
             playerId: playerId,
@@ -138,7 +148,7 @@ class CreateMatchController extends GetxController {
       // Create Team 2 players list with unique timestamp IDs
       List<BadmintonPlayerModel> team2PlayersList = [];
       for (int i = 0; i < team2Players.length; i++) {
-        final playerId = DateTime.now().microsecondsSinceEpoch.toString();
+        final playerId = '${baseTimestamp}_t2_p${i}'; // Unique ID with counter
         team2PlayersList.add(
           BadmintonPlayerModel(
             playerId: playerId,
@@ -164,7 +174,7 @@ class CreateMatchController extends GetxController {
       );
 
 
-      await Get.find<MyMatchesController>().addMatch(match);
+      await AppControllers.myMatches.addMatch(match);
 
       pendingMatch.value = match;
       showServiceDialog.value = true;
@@ -174,7 +184,6 @@ class CreateMatchController extends GetxController {
     } finally {
       isCreating.value = false;
     }
-
   }
            
 
@@ -182,7 +191,7 @@ class CreateMatchController extends GetxController {
   Future<void> initializeMatchAndNavigate(String matchId, String initialServer) async {
     try {
       // Initialize match with first server
-      await Get.find<MatchController>().initializeMatchWithService(matchId, initialServer);
+      await AppControllers.match.initializeMatchWithService(matchId, initialServer);
       
       // Match is ready, navigate to match screen
       createdMatchId.value = matchId;
@@ -195,7 +204,7 @@ class CreateMatchController extends GetxController {
 
   Future<void> cancelMatchCreation(String matchId) async {
     try {
-      await Get.find<MyMatchesController>().deleteMatch(matchId);
+      await AppControllers.myMatches.deleteMatch(matchId);
       cancelledMatchId.value = matchId;
     } catch (e) {
       cancelledMatchId.value = matchId;

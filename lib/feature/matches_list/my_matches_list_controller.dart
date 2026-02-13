@@ -72,9 +72,7 @@ class MyMatchesController extends GetxController {
 
   // Add new match (used by CreateMatchController)
   Future<void> addMatch(BadmintonMatchModel match) async {
-    print("2");
     matches.add(match);
-    print("1");
     await StorageService.saveMatchToStorage(match);
     successMessage.value = 'Match created successfully!';
   }

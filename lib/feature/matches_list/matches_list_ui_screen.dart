@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'my_matches_list_controller.dart';
 import '../../models/badminton_models.dart';
 import '../match_rule/match_rule_ui_screen.dart';
 import '../../main.dart';
+import '../../controllers/app_controllers.dart';
 
 class MatchesListScreen extends StatelessWidget {
   const MatchesListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(MyMatchesController());
+    // Controller already initialized in AppControllers
 
     // Setup observers once
-    ever(controller.successMessage, (String message) {
+    ever(AppControllers.myMatches.successMessage, (String message) {
       if (message.isNotEmpty) {
         Get.snackbar(
           'Success',
@@ -22,11 +22,11 @@ class MatchesListScreen extends StatelessWidget {
           colorText: Colors.green.shade700,
           icon: Icon(Icons.check_circle, color: Colors.green.shade700),
         );
-        controller.successMessage.value = '';
+        AppControllers.myMatches.successMessage.value = '';
       }
     });
 
-    ever(controller.errorMessage, (String message) {
+    ever(AppControllers.myMatches.errorMessage, (String message) {
       if (message.isNotEmpty) {
         Get.snackbar(
           'Error',
@@ -35,7 +35,7 @@ class MatchesListScreen extends StatelessWidget {
           colorText: Colors.red.shade700,
           icon: Icon(Icons.error, color: Colors.red.shade700),
         );
-        controller.errorMessage.value = '';
+        AppControllers.myMatches.errorMessage.value = '';
       }
     });
 
@@ -54,21 +54,21 @@ class MatchesListScreen extends StatelessWidget {
         ),
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
+        if (AppControllers.myMatches.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.matches.isEmpty) {
+        if (AppControllers.myMatches.matches.isEmpty) {
           return _buildEmptyState();
         }
 
         return RefreshIndicator(
-          onRefresh: controller.loadMatches,
+          onRefresh: AppControllers.myMatches.loadMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.LetestFirstSortedMatches().length,
+            itemCount: AppControllers.myMatches.LetestFirstSortedMatches().length,
             itemBuilder: (context, index) {
-              return _buildMatchCard(controller.LetestFirstSortedMatches()[index]);
+              return _buildMatchCard(AppControllers.myMatches.LetestFirstSortedMatches()[index]);
             },
           ),
         );

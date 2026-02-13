@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'resume_match_controller.dart';
 import '../../models/badminton_models.dart';
 import '../match_rule/match_rule_ui_screen.dart';
+import '../../controllers/app_controllers.dart';
 
 class ResumeMatchesScreen extends StatefulWidget {
   const ResumeMatchesScreen({super.key});
@@ -12,15 +12,12 @@ class ResumeMatchesScreen extends StatefulWidget {
 }
 
 class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
-  late final ResumeMatchController controller;
-
   @override
   void initState() {
     super.initState();
-    controller = Get.put(ResumeMatchController());
     
     // Setup error message listener
-    ever(controller.errorMessage, (String message) {
+    ever(AppControllers.resumeMatch.errorMessage, (String message) {
       if (message.isNotEmpty) {
         Get.snackbar(
           'Error',
@@ -29,7 +26,7 @@ class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
           colorText: Colors.red.shade700,
           icon: Icon(Icons.error, color: Colors.red.shade700),
         );
-        controller.errorMessage.value = '';
+        AppControllers.resumeMatch.errorMessage.value = '';
       }
     });
   }
@@ -47,18 +44,18 @@ class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
         elevation: 0,
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
+        if (AppControllers.resumeMatch.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final resumableMatches = controller.resumableMatches;
+        final resumableMatches = AppControllers.resumeMatch.resumableMatches;
 
         if (resumableMatches.isEmpty) {
           return _buildEmptyState();
         }
 
         return RefreshIndicator(
-          onRefresh: controller.refreshMatches,
+          onRefresh: AppControllers.resumeMatch.refreshMatches,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: resumableMatches.length,
