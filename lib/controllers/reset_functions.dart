@@ -22,7 +22,7 @@ class ResetFunctions {
     // Reset dialog states
     controller.showServiceDialog.value = false;
     controller.pendingMatch.value = null;
-    controller.CreatedMatchAndNevigate.value = '';
+    controller.createdMatchAndNavigate.value = '';
     controller.cancelledMatchId.value = '';
     
     // Clear text controllers
@@ -52,14 +52,6 @@ class ResetFunctions {
     controller.showMatchCompleteDialog.value = false;
     controller.pendingMatch.value = null;
   }
-  
-  /// Reset ResumeMatchController
-  // static void resetResumeMatch() {
-  //   final controller = AppControllers.resumeMatch;
-    
-  //   controller.isLoading.value = false;
-  //   controller.errorMessage.value = '';
-  // }
   
   /// Reset all controllers at once
   static void resetAll() {

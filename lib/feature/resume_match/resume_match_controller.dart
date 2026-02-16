@@ -3,7 +3,11 @@ import '../../models/badminton_models.dart';
 import '../../services/storage_service.dart';
 
 class ResumeMatchController extends GetxController {
-  final RxList<BadmintonMatchModel> _allMatches = <BadmintonMatchModel>[].obs;
+  // All matches loaded from storage
+  final RxList<BadmintonMatchModel> allMatches = <BadmintonMatchModel>[].obs;
+  
+  // Filtered resumable matches (computed from allMatches)
+  final RxList<BadmintonMatchModel> resumableMatches = <BadmintonMatchModel>[].obs;
   
   // Loading state indicator
   final RxBool isLoading = false.obs;
@@ -14,34 +18,84 @@ class ResumeMatchController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('🎬 [ResumeMatch] Controller initialized');
     loadMatches();
   }
 
   Future<void> loadMatches() async {
     try {
       isLoading.value = true;
-      errorMessage.value = ''; //rerror message clear
+      errorMessage.value = '';
       
+      print('\n📂 [ResumeMatch] ========== LOADING MATCHES ==========');
       final loadedMatches = await StorageService.getAllMatchesFromStorage();
-      _allMatches.value = loadedMatches;
-    } catch (e) {
+      
+      print('📊 [ResumeMatch] Loaded ${loadedMatches.length} total matches from storage');
+      
+      // Update all matches
+      allMatches.value = loadedMatches;
+      
+      // Log each match
+      for (final match in loadedMatches) {
+        print('  📄 Match: ${match.matchId}');
+        print('     Teams: ${match.team1.teamName} vs ${match.team2.teamName}');
+        print('     Status: ${match.status.code}');
+        print('     isCompleted: ${match.isCompleted}');
+        print('     isInProgress: ${match.isInProgress}');
+      }
+      
+      // Filter and update resumable matches
+      _updateResumableMatches();
+      
+      print('========================================\n');
+      
+    } catch (e, stackTrace) {
+      print('❌ [ResumeMatch] Failed to load: $e');
+      print('Stack trace: $stackTrace');
       errorMessage.value = 'Failed to load matches';
-      _allMatches.clear();
+      allMatches.clear();
+      resumableMatches.clear();
     } finally {
       isLoading.value = false;
     }
   }
 
-  List<BadmintonMatchModel> get resumeMatches {
-    final matches = _allMatches;
-
-    final filteredMatches = matches.where((match) => 
-      !match.isCompleted || match.status == BadmintonMatchStatus.paused
-    ).toList();
-   
-    filteredMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  void _updateResumableMatches() {
+    print('🔍 [ResumeMatch] Filtering ${allMatches.length} matches...');
     
-    return filteredMatches;
+    // Filter: Show only inProgress or paused matches
+    final filtered = allMatches.where((match) {
+      final isInProgress = match.status == BadmintonMatchStatus.inProgress;
+      final isPaused = match.status == BadmintonMatchStatus.paused;
+      final isResumable = isInProgress || isPaused;
+      
+      print('  🔎 ${match.matchId}:');
+      print('     status = ${match.status.code}');
+      print('     isInProgress = $isInProgress');
+      print('     isPaused = $isPaused');
+      print('     isResumable = $isResumable');
+      
+      return isResumable;
+    }).toList();
+    
+    // Sort by creation date (newest first)
+    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    
+    // Update observable list
+    resumableMatches.value = filtered;
+    
+    print('✅ [ResumeMatch] Found ${filtered.length} resumable matches');
+    if (filtered.isEmpty) {
+      print('⚠️ [ResumeMatch] No resumable matches found!');
+      print('   This means all matches are either completed or cancelled');
+    }
   }
-  Future<void> refreshMatches() => loadMatches();
+  
+  Future<void> refreshMatches() async {
+    print('🔄 [ResumeMatch] Manual refresh triggered...');
+    await loadMatches();
+  }
+  
+  // Legacy getter for backward compatibility
+  List<BadmintonMatchModel> get resumeMatches => resumableMatches.value;
 }

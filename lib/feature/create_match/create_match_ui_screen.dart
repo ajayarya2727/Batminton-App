@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../match_rule/match_rule_ui_screen.dart';
 import '../../models/badminton_models.dart';
 import '../../controllers/app_controllers.dart';
 
@@ -9,46 +8,9 @@ class CreateMatchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Controllers already initialized in AppControllers
-
-    // Setup observers for error messages
-    ever(AppControllers.createMatch.errorMessage, (String message) {
-      if (message.isNotEmpty) {
-        Get.snackbar(
-          'Error',
-          message,
-          backgroundColor: Colors.red.shade100,
-          colorText: Colors.red.shade700,
-          icon: Icon(Icons.error, color: Colors.red.shade700),
-        );
-        AppControllers.createMatch.errorMessage.value = '';
-      }
-    });
-
-    // Setup observer for service dialog
-    ever(AppControllers.createMatch.showServiceDialog, (bool show) {
-      if (show && AppControllers.createMatch.pendingMatch.value != null) {
-        _showServiceSelectionDialog(context, AppControllers.createMatch.pendingMatch.value!);
-        AppControllers.createMatch.showServiceDialog.value = false;
-      }
-    });
-
-    // Setup observer for match cancellation
-    ever(AppControllers.createMatch.cancelledMatchId, (String matchId) {
-      if (matchId.isNotEmpty) {
-        Get.back(); // Go back to previous screen
-        AppControllers.createMatch.cancelledMatchId.value = '';
-      }
-    });
-
-    // Setup observer for successful match creation and navigation
-    ever(AppControllers.createMatch.CreatedMatchAndNevigate, (String matchId) {
-      if (matchId.isNotEmpty) {
-        Get.off(() => MatchDetailScreen(matchId: matchId)); // Replace current screen with match screen
-        AppControllers.createMatch.CreatedMatchAndNevigate.value = '';
-      }
-    });
-
+    // ✅ CORRECT: No listeners in build() method
+    // All listeners are in controller's onInit()
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -162,7 +124,6 @@ class CreateMatchScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Team Header with Logo
             Row(
               children: [
                 Obx(() => Container(
@@ -195,7 +156,6 @@ class CreateMatchScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Team Name Input
             TextFormField(
               controller: teamNameController,
               decoration: InputDecoration(
@@ -213,7 +173,6 @@ class CreateMatchScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Logo Selection
             const Text(
               'Choose Team Logo:',
               style: TextStyle(
@@ -260,7 +219,6 @@ class CreateMatchScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Player Name Inputs
             const Text(
               'Player Names:',
               style: TextStyle(
@@ -347,170 +305,6 @@ class CreateMatchScreen extends StatelessWidget {
               ),
             ),
       )),
-    );
-  }
-
-  // Service selection dialog
-  static void _showServiceSelectionDialog(
-    BuildContext context,
-    BadmintonMatchModel match,
-  ) {
-    // Build Team 1 player buttons
-    List<Widget> team1PlayerButtons = [];
-    for (int i = 0; i < match.team1.players.length; i++) {
-      final player = match.team1.players[i];
-      team1PlayerButtons.add(
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ElevatedButton(
-            onPressed: () {
-              Get.back(); // Close dialog
-              AppControllers.createMatch.initializeMatchAndNavigate(match.matchId, player.playerId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text(
-              player.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Build Team 2 player buttons
-    List<Widget> team2PlayerButtons = [];
-    for (int i = 0; i < match.team2.players.length; i++) {
-      final player = match.team2.players[i];
-      team2PlayerButtons.add(
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ElevatedButton(
-            onPressed: () {
-              Get.back(); // Close dialog
-              AppControllers.createMatch.initializeMatchAndNavigate(match.matchId, player.playerId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            child: Text(
-              player.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      );
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('🏸 Who will serve first?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 20),
-              
-              // Team 1 Players
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
-                        const SizedBox(width: 8),
-                        Text(
-                          match.team1.teamName.isNotEmpty ? match.team1.teamName : "Team 1",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...team1PlayerButtons,
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Team 2 Players
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          match.team2.teamName.isNotEmpty ? match.team2.teamName : "Team 2",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...team2PlayerButtons,
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Cancel button
-              SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                  onPressed: () {
-                    Get.back(); // Close dialog
-                    AppControllers.createMatch.cancelMatchCreation(match.matchId);
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  icon: const Icon(Icons.cancel, size: 20),
-                  label: const Text(
-                    'Cancel Match Creation',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

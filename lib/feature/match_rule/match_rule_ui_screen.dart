@@ -1662,8 +1662,12 @@ class MatchDetailScreen extends StatelessWidget {
               child: const Text('No, End Round'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Get.back(); // Close dialog
+                
+                // Mark that user chose to continue to 30
+                await AppControllers.match.markContinueTo30(matchId);
+                
                 Get.snackbar(
                   'Continue Playing',
                   'Round continues to 30 points...',

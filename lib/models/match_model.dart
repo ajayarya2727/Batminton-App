@@ -214,7 +214,7 @@ class BadmintonMatchModel {
       team1: BadmintonTeamModel.fromJson(json['team1'] as Map<String, dynamic>),
       team2: BadmintonTeamModel.fromJson(json['team2'] as Map<String, dynamic>),
       status: BadmintonMatchStatus.fromCode(json['status'] as String? ?? 'in_progress'),
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['matchCreatedAt'] as String? ?? json['createdAt'] as String), // Support both keys
       currentRoundNumber: json['currentRoundNumber'] as int? ?? 1,
       rounds: (json['rounds'] as List<dynamic>?)
           ?.map((r) => BadmintonRoundModel.fromJson(r as Map<String, dynamic>))

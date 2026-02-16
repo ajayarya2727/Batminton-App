@@ -21,12 +21,23 @@ class StorageService {
   /// Save a match to its JSON file
   static Future<void> saveMatchToStorage(BadmintonMatchModel matchmodel) async {
     try {
+      print('💾 [Storage] Saving match ${matchmodel.matchId}...');
       final matchesDir = await _getMatchesDirectory();
+      print('📁 [Storage] Directory: ${matchesDir.path}');
+      
       final matchFile = File('${matchesDir.path}/${matchmodel.matchId}.json');
       
       final matchJson = json.encode(matchmodel.toJson());
       await matchFile.writeAsString(matchJson);
+      
+      // Verify file was written
+      final exists = await matchFile.exists();
+      final size = exists ? await matchFile.length() : 0;
+      print('✅ [Storage] Match saved: ${matchFile.path}');
+      print('   File exists: $exists, Size: $size bytes');
+      print('   Status: ${matchmodel.status.code}');
     } catch (e) {
+      print('❌ [Storage] Save failed: $e');
       throw Exception('Failed to save match ${matchmodel.matchId}: $e');
     }
   }
@@ -53,31 +64,47 @@ class StorageService {
   /// Load all matches from storage
   static Future<List<BadmintonMatchModel>> getAllMatchesFromStorage() async {
     try {
+      print('\n📂 [Storage] Loading all matches...');
       final matchesDir = await _getMatchesDirectory();
+      print('📁 [Storage] Directory: ${matchesDir.path}');
+      
       final matches = <BadmintonMatchModel>[];
       
       if (!await matchesDir.exists()) {
+        print('⚠️ [Storage] Directory does not exist');
         return matches;
       }
       
       final files = await matchesDir.list().toList();
+      print('📄 [Storage] Found ${files.length} files in directory');
       
       for (final file in files) {
         if (file is File && file.path.endsWith('.json')) {
           try {
+            print('   📖 Reading: ${file.path.split('/').last}');
             final matchJson = await file.readAsString();
             final matchData = json.decode(matchJson) as Map<String, dynamic>;
+            
+            print('      Keys in JSON: ${matchData.keys.join(', ')}');
+            print('      Status: ${matchData['status']}');
+            
             final match = BadmintonMatchModel.fromJson(matchData);
             matches.add(match);
-          } catch (e) {
+            print('      ✅ Loaded: ${match.matchId}, status: ${match.status.code}');
+          } catch (e, stackTrace) {
+            print('      ❌ Failed to parse: $e');
+            print('      Stack: $stackTrace');
             // Skip corrupted files
             continue;
           }
         }
       }
       
+      print('✅ [Storage] Loaded ${matches.length} matches total\n');
       return matches;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [Storage] Load failed: $e');
+      print('Stack: $stackTrace');
       throw Exception('Failed to load matches: $e');
     }
   }

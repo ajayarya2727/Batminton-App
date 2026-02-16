@@ -9,6 +9,11 @@ class ResumeMatchesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Force refresh when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppControllers.resumeMatch.refreshMatches();
+    });
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -20,11 +25,13 @@ class ResumeMatchesScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: Obx(() {
+        
         if (AppControllers.resumeMatch.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final resumableMatches = AppControllers.resumeMatch.resumeMatches;
+        // ✅ Use the observable list directly
+        final resumableMatches = AppControllers.resumeMatch.resumableMatches;
 
         if (resumableMatches.isEmpty) {
           return _buildEmptyState();
@@ -36,7 +43,8 @@ class ResumeMatchesScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: resumableMatches.length,
             itemBuilder: (context, index) {
-              return _buildResumeMatchCard(resumableMatches[index]);
+              final match = resumableMatches[index];
+              return _buildResumeMatchCard(match);
             },
           ),
         );

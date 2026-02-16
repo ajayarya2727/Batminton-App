@@ -43,6 +43,16 @@ class MatchController extends GetxController {
   
   //  SCORE LOGIC 
 
+  // Mark that user chose to continue to 30 points
+  Future<void> markContinueTo30(String matchId) async {
+    final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex == -1) return;
+    
+    AppControllers.myMatches.matches[matchIndex] = AppControllers.myMatches.matches[matchIndex].markContinueTo30Chosen();
+    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+  }
+
   // Update player score and handle game logic
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
     final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
@@ -111,16 +121,16 @@ class MatchController extends GetxController {
     updatedRounds[match.currentRoundNumber - 1] = updatedRound;
     AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
     
-    // Check for 30 points (round complete)
-    if (newTeam1Score == 30 || newTeam2Score == 30) {
+    // Check for 30 points (if user chose to continue to 30)
+    if (match.currentRound!.continueTo30Chosen && (newTeam1Score == 30 || newTeam2Score == 30)) {
       final roundWinner = newTeam1Score == 30 ? 'team1' : 'team2';
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-      AppControllers.myMatches.matches.refresh(); // Trigger UI update
+      AppControllers.myMatches.matches.refresh();
       await completeCurrentRound(matchId, roundWinner, newTeam1Score, newTeam2Score);
       return;
     }
     
-    // Check for 21 points milestone
+    // Check for 21 points milestone (show popup only once)
     bool showPopup = false;
     if (!match.milestone21Reached) {
       if ((newTeam1Score == 21 && previousTeam1Score < 21) || 
@@ -132,12 +142,12 @@ class MatchController extends GetxController {
     if (showPopup) {
       AppControllers.myMatches.matches[matchIndex] = AppControllers.myMatches.matches[matchIndex].markMilestone21Reached();
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-      AppControllers.myMatches.matches.refresh(); // Trigger UI update
+      AppControllers.myMatches.matches.refresh();
       pendingMatch.value = AppControllers.myMatches.matches[matchIndex];
       showContinueDialog.value = true;
     } else {
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-      AppControllers.myMatches.matches.refresh(); // Trigger UI update
+      AppControllers.myMatches.matches.refresh();
       
       // Update live JSON file
       await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
