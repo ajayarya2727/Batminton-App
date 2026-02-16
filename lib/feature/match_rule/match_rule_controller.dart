@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../models/badminton_models.dart';
@@ -6,6 +7,8 @@ import '../../services/storage_service.dart';
 import '../../controllers/app_controllers.dart';
 
 class MatchController extends GetxController {
+  // ================= STATE VARIABLES =================
+  
   // Dialog visibility flags
   final RxBool showManualServiceDialog = false.obs;
   final RxBool showContinueDialog = false.obs;
@@ -15,6 +18,8 @@ class MatchController extends GetxController {
   
   // Pending match for dialogs (stores current match being processed)
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
+  
+  // ================= INITIALIZATION =================
 
   // Initialize match with first server
   Future<void> initializeMatchWithService(String matchId, String initialServer) async {
@@ -33,22 +38,8 @@ class MatchController extends GetxController {
     debugPrint(jsonString, wrapWidth: 1024);
     debugPrint('===================================\n');
   }
-
-  // Manually change server during match
-  Future<void> manuallySetService(String matchId, String servingPlayerId) async {
-    final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
-    if (matchIndex == -1) return;
-    
-    final match = AppControllers.myMatches.matches[matchIndex];
-    if (match.currentRound == null) return;
-    
-    final updatedRound = match.currentRound!.copyWith(currentServer: servingPlayerId);
-    final updatedmatchRounds = List<BadmintonRoundModel>.from(match.rounds);
-    updatedmatchRounds[match.currentRoundNumber - 1] = updatedRound;
-    
-    AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedmatchRounds);
-    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-  }
+  
+  // ================= SCORE LOGIC =================
 
   // Update player score and handle game logic
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
@@ -82,9 +73,11 @@ class MatchController extends GetxController {
     String? newCurrentServer;
     
     if (newPlayerScore > prevPlayerScore) {
+      // Score increased - player scored a point
       updatedPointSequence.add(playerId);
       newCurrentServer = playerId;
     } else if (newPlayerScore < prevPlayerScore) {
+      // Score decreased - undo last point
       if (updatedPointSequence.isNotEmpty) {
         updatedPointSequence.removeLast();
         newCurrentServer = updatedPointSequence.isEmpty 
@@ -94,7 +87,13 @@ class MatchController extends GetxController {
         newCurrentServer = match.currentServer;
       }
     } else {
+      // Score unchanged - keep current server
       newCurrentServer = match.currentServer;
+    }
+    
+    // Safety check: If no points played yet, use initial server
+    if (updatedPointSequence.isEmpty) {
+      newCurrentServer = match.currentRound!.initialServer;
     }
     
     // Update round
@@ -138,13 +137,38 @@ class MatchController extends GetxController {
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
       AppControllers.myMatches.matches.refresh(); // Trigger UI update
       
-      // Print only score update, not full JSON
-      final currentRound = AppControllers.myMatches.matches[matchIndex].currentRound;
-      if (currentRound != null) {
-        debugPrint('⚡ SCORE UPDATE: Team1=${currentRound.team1Score}, Team2=${currentRound.team2Score} | Player Scores: ${currentRound.playerScores}');
-      }
+      // Update live JSON file
+      await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+      
+      // Log score update with full JSON
+      _logScoreUpdate(AppControllers.myMatches.matches[matchIndex]);
     }
   }
+
+  // Manually change server during match
+  Future<void> manuallySetService(String matchId, String servingPlayerId) async {
+    final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex == -1) return;
+    
+    final match = AppControllers.myMatches.matches[matchIndex];
+    if (match.currentRound == null) return;
+    
+    final updatedRound = match.currentRound!.copyWith(currentServer: servingPlayerId);
+    final updatedmatchRounds = List<BadmintonRoundModel>.from(match.rounds);
+    updatedmatchRounds[match.currentRoundNumber - 1] = updatedRound;
+    
+    AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedmatchRounds);
+    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+    
+    // Log server change with full JSON
+    await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+    _printJsonWithTag('badminton.server_change', AppControllers.myMatches.matches[matchIndex].toJson());
+  }
+  
+  // ================= ROUND LOGIC =================
+
+  // ================= ROUND LOGIC =================
 
   // Complete current round
   Future<void> completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) async {
@@ -187,6 +211,11 @@ class MatchController extends GetxController {
     final match = AppControllers.myMatches.matches[matchIndex];
     AppControllers.myMatches.matches[matchIndex] = match.startNextRound();
     await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+    
+    // Log round start with full JSON
+    await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+    _printJsonWithTag('badminton.round_start', AppControllers.myMatches.matches[matchIndex].toJson());
   }
 
   // Start next round with custom server
@@ -207,10 +236,14 @@ class MatchController extends GetxController {
     final nextRound = BadmintonRoundModel(
       roundNumber: nextRoundNumber,
       status: BadmintonRoundStatus.inProgress,
+      startedAt: DateTime.now(),
       initialServer: initialServer,
       currentServer: initialServer,
       pointSequence: [],
       playerScores: initialPlayerScores,
+      milestone21Reached: false,
+      continueTo30Chosen: false,
+      breaks: [], // Empty breaks list for new round
     );
     
     final updatedRounds = List<BadmintonRoundModel>.from(match.rounds)..add(nextRound);
@@ -220,7 +253,16 @@ class MatchController extends GetxController {
     );
     
     await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+    
+    // Log round start with full JSON
+    await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+    _printJsonWithTag('badminton.round_start', AppControllers.myMatches.matches[matchIndex].toJson());
   }
+  
+  // ================= BREAK LOGIC =================
+
+  // ================= BREAK LOGIC =================
 
   // Pause match
   Future<void> pauseMatch(String matchId) async {
@@ -228,10 +270,24 @@ class MatchController extends GetxController {
     if (matchIndex == -1) return;
     
     final match = AppControllers.myMatches.matches[matchIndex];
-    if (match.status == BadmintonMatchStatus.inProgress) {
-      AppControllers.myMatches.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.paused);
+    if (match.status == BadmintonMatchStatus.inProgress && match.currentRound != null) {
+      // Update current round with break start time
+      final updatedRound = match.currentRound!.takeBreak();
+      final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
+      updatedRounds[match.currentRoundNumber - 1] = updatedRound;
+      
+      // Update match with paused status and updated round
+      AppControllers.myMatches.matches[matchIndex] = match.copyWith(
+        status: BadmintonMatchStatus.paused,
+        rounds: updatedRounds,
+      );
+      
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
       AppControllers.myMatches.matches.refresh();
+      
+      // Log break start with full JSON
+      await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+      _logBreakStart(AppControllers.myMatches.matches[matchIndex]);
     }
   }
 
@@ -241,12 +297,28 @@ class MatchController extends GetxController {
     if (matchIndex == -1) return;
     
     final match = AppControllers.myMatches.matches[matchIndex];
-    if (match.status == BadmintonMatchStatus.paused) {
-      AppControllers.myMatches.matches[matchIndex] = match.copyWith(status: BadmintonMatchStatus.inProgress);
+    if (match.status == BadmintonMatchStatus.paused && match.currentRound != null) {
+      // Update current round with break end time and duration
+      final updatedRound = match.currentRound!.resumeFromBreak();
+      final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
+      updatedRounds[match.currentRoundNumber - 1] = updatedRound;
+      
+      // Update match with in-progress status and updated round
+      AppControllers.myMatches.matches[matchIndex] = match.copyWith(
+        status: BadmintonMatchStatus.inProgress,
+        rounds: updatedRounds,
+      );
+      
       await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
       AppControllers.myMatches.matches.refresh();
+      
+      // Log break end with full JSON
+      await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+      _logBreakEnd(AppControllers.myMatches.matches[matchIndex]);
     }
   }
+  
+  // ================= MATCH UPDATE HELPER =================
 
   // Manually complete match
   Future<void> completeMatch(String matchId) async {
@@ -258,6 +330,8 @@ class MatchController extends GetxController {
     );
     await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
   }
+  
+  // ================= DIALOG TRIGGERS =================
 
   // Trigger dialogs (called by UI)
   void triggerManualServiceDialog(BadmintonMatchModel match) {
@@ -271,5 +345,69 @@ class MatchController extends GetxController {
       pendingMatch.value = match;
       showNextRoundServiceDialog.value = true;
     }
+  }
+  
+  // ================= JSON LOGGING =================
+
+  // ================= JSON LOGGING =================
+
+  /// Save live match JSON to file
+  Future<void> _saveLiveMatchJson(BadmintonMatchModel match) async {
+    try {
+      await StorageService.saveLiveMatchJson(match);
+    } catch (e) {
+      print('Error saving live match JSON: $e');
+    }
+  }
+
+  /// Print JSON with tag (handles long JSON by splitting into chunks at line breaks)
+  void _printJsonWithTag(String tag, Map<String, dynamic> json) {
+    const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+    final jsonString = encoder.convert(json);
+    
+    // Print tag
+    print('\n[$tag]');
+    
+    // Split by lines and print in batches to avoid truncation
+    final lines = jsonString.split('\n');
+    const int maxLinesPerChunk = 30; // Print 30 lines at a time (safer for console)
+    
+    for (int i = 0; i < lines.length; i += maxLinesPerChunk) {
+      final int end = (i + maxLinesPerChunk < lines.length) ? i + maxLinesPerChunk : lines.length;
+      final chunk = lines.sublist(i, end).join('\n');
+      print(chunk);
+    }
+    
+    print(''); // Empty line for readability
+  }
+
+  /// Log score update with full JSON
+  void _logScoreUpdate(BadmintonMatchModel match) {
+    log('badminton.score_update ${match.toJson()}');
+  }
+
+  /// Log break start
+  void _logBreakStart(BadmintonMatchModel match) {
+    _printJsonWithTag('badminton.break_start', match.toJson());
+  }
+
+  /// Log break end
+  void _logBreakEnd(BadmintonMatchModel match) {
+    _printJsonWithTag('badminton.break_end', match.toJson());
+  }
+
+  /// Log round complete
+  void _logRoundComplete(BadmintonMatchModel match) {
+    _printJsonWithTag('badminton.round_complete', match.toJson());
+  }
+
+  /// Log match complete
+  void _logMatchComplete(BadmintonMatchModel match) {
+    _printJsonWithTag('badminton.match_complete', match.toJson());
+  }
+
+  /// Log 21-point milestone
+  void _logMilestone(BadmintonMatchModel match) {
+    _printJsonWithTag('badminton.milestone_21', match.toJson());
   }
 }

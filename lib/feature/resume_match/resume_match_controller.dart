@@ -20,7 +20,7 @@ class ResumeMatchController extends GetxController {
   Future<void> loadMatches() async {
     try {
       isLoading.value = true;
-      errorMessage.value = ''; 
+      errorMessage.value = ''; //rerror message clear
       
       final loadedMatches = await StorageService.getAllMatchesFromStorage();
       _allMatches.value = loadedMatches;
@@ -32,7 +32,7 @@ class ResumeMatchController extends GetxController {
     }
   }
 
-  List<BadmintonMatchModel> get resumableMatches {
+  List<BadmintonMatchModel> get resumeMatches {
     final matches = _allMatches.value;
 
     final filteredMatches = matches.where((match) => 

@@ -110,16 +110,86 @@ class BadmintonMatchModel {
 
   // JSON serialization
   Map<String, dynamic> toJson() {
+    // Convert winnerId to winner team name
+    String? winnerTeamName;
+    if (winnerId == 'team1') {
+      winnerTeamName = team1.teamName;
+    } else if (winnerId == 'team2') {
+      winnerTeamName = team2.teamName;
+    }
+    
+    // Calculate team-level stats from rounds
+    List<int> team1RoundScores = [];
+    List<int> team2RoundScores = [];
+    int team1TotalScore = 0;
+    int team2TotalScore = 0;
+    
+    for (final round in rounds) {
+      team1RoundScores.add(round.team1Score);
+      team2RoundScores.add(round.team2Score);
+      team1TotalScore += round.team1Score;
+      team2TotalScore += round.team2Score;
+    }
+    
+    // Get current round player scores
+    final currentRoundPlayerScores = currentRound?.playerScores ?? {};
+    final currentServerId = currentRound?.currentServer;
+    
+    // Build team1 JSON with updated player scores
+    final team1PlayersJson = team1.players.map((player) {
+      final playerCurrentScore = currentRoundPlayerScores[player.playerId] ?? 0;
+      final isServer = player.playerId == currentServerId;
+      return {
+        'playerId': player.playerId,
+        'name': player.name,
+        'currentRoundScore': playerCurrentScore,
+        'isCurrentServer': isServer,
+      };
+    }).toList();
+    
+    // Build team2 JSON with updated player scores
+    final team2PlayersJson = team2.players.map((player) {
+      final playerCurrentScore = currentRoundPlayerScores[player.playerId] ?? 0;
+      final isServer = player.playerId == currentServerId;
+      return {
+        'playerId': player.playerId,
+        'name': player.name,
+        'currentRoundScore': playerCurrentScore,
+        'isCurrentServer': isServer,
+      };
+    }).toList();
+    
+    // Build team JSON with aggregated stats
+    final team1Json = {
+      'teamId': team1.teamId,
+      'teamName': team1.teamName,
+      'teamLogo': team1.teamLogo,
+      'players': team1PlayersJson,
+      'totalMatchScore': team1TotalScore,
+      'roundScores': team1RoundScores,
+      'roundsWon': team1RoundsWon,
+    };
+    
+    final team2Json = {
+      'teamId': team2.teamId,
+      'teamName': team2.teamName,
+      'teamLogo': team2.teamLogo,
+      'players': team2PlayersJson,
+      'totalMatchScore': team2TotalScore,
+      'roundScores': team2RoundScores,
+      'roundsWon': team2RoundsWon,
+    };
+    
     return {
       'matchId': matchId,
       'matchType': matchType.displayName,
-      'team1': team1.toJson(),
-      'team2': team2.toJson(),
+      'team1': team1Json,
+      'team2': team2Json,
       'status': status.code,
-      'createdAt': createdAt.toIso8601String(),
+      'matchCreatedAt': createdAt.toIso8601String(),
       'currentRoundNumber': currentRoundNumber,
       'rounds': rounds.map((r) => r.toJson()).toList(),
-      'winnerId': winnerId,
+      'winnerTeam': winnerTeamName,
     };
   }
 
@@ -405,6 +475,7 @@ class BadmintonMatchModel {
       playerScores: initialPlayerScores,
       milestone21Reached: false, // Reset milestone for new round
       continueTo30Chosen: false, // Reset continue flag for new round
+      breaks: [], // Empty breaks list for new round
     );
     
     final updatedRounds = List<BadmintonRoundModel>.from(rounds)..add(nextRound);

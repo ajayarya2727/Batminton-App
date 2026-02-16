@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'break_record.dart';
 
 class BadmintonRoundModel {
   final int roundNumber;
@@ -7,13 +8,16 @@ class BadmintonRoundModel {
   final BadmintonRoundStatus status;
   final String? winnerId;
   final bool milestone21Reached;
-  final bool continueTo30Chosen; // Flag to track if user chose "Continue to 30"
+  final bool continueTo30Chosen;
   final DateTime? startedAt;
   final DateTime? completedAt;
-  final String? currentServer; // Player ID who is currently serving
-  final String? initialServer; // Who started serving this round
-  final List<String> pointSequence; // Track who won each point: ['team1', 'team2', 'team1', ...]
-  final Map<String, int> playerScores; // Individual player scores: playerId -> points scored
+  final String? currentServer;
+  final String? initialServer;
+  final List<String> pointSequence;
+  final Map<String, int> playerScores;
+  
+  // Break tracking - supports multiple breaks per round
+  final List<BreakRecord> breaks;
 
   const BadmintonRoundModel({
     required this.roundNumber,
@@ -29,6 +33,7 @@ class BadmintonRoundModel {
     this.initialServer,
     this.pointSequence = const [],
     this.playerScores = const {},
+    this.breaks = const [],
   });
 
   // Computed properties
@@ -37,6 +42,11 @@ class BadmintonRoundModel {
   bool get hasWinner => winnerId != null;
   bool get hasReached21Points => team1Score >= 21 || team2Score >= 21;
   bool get hasReached30Points => team1Score >= 30 || team2Score >= 30;
+  
+  // Break computed properties
+  int get breakCount => breaks.length;
+  int get totalBreakDurationSeconds => breaks.fold<int>(0, (sum, b) => sum + b.durationSeconds);
+  bool get hasActiveBreak => breaks.any((b) => b.isActive);
 
   // JSON serialization
   Map<String, dynamic> toJson() {
@@ -52,8 +62,9 @@ class BadmintonRoundModel {
       'completedAt': completedAt?.toIso8601String(),
       'currentServer': currentServer,
       'initialServer': initialServer,
-      'pointSequence': pointSequence,
-      'playerScores': playerScores,
+      'breaks': breaks.map((b) => b.toJson()).toList(),
+      'breakCount': breakCount,
+      'totalBreakDurationSeconds': totalBreakDurationSeconds,
     };
   }
 
@@ -78,11 +89,13 @@ class BadmintonRoundModel {
       pointSequence: (json['pointSequence'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ?? 
-          // Fallback for old serviceHistory format
           (json['serviceHistory'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ?? [],
       playerScores: Map<String, int>.from(json['playerScores'] as Map<String, dynamic>? ?? {}),
+      breaks: (json['breaks'] as List<dynamic>?)
+          ?.map((item) => BreakRecord.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 
@@ -101,6 +114,7 @@ class BadmintonRoundModel {
     String? initialServer,
     List<String>? pointSequence,
     Map<String, int>? playerScores,
+    List<BreakRecord>? breaks,
   }) {
     return BadmintonRoundModel(
       roundNumber: roundNumber ?? this.roundNumber,
@@ -116,6 +130,7 @@ class BadmintonRoundModel {
       initialServer: initialServer ?? this.initialServer,
       pointSequence: pointSequence ?? this.pointSequence,
       playerScores: playerScores ?? this.playerScores,
+      breaks: breaks ?? this.breaks,
     );
   }
 
@@ -156,6 +171,19 @@ class BadmintonRoundModel {
 
   BadmintonRoundModel updateServer(String newServer) {
     return copyWith(currentServer: newServer);
+  }
+
+  // Break management methods
+  BadmintonRoundModel takeBreak() {
+    final manager = BreakManager(breaks: breaks);
+    final updated = manager.startBreak();
+    return copyWith(breaks: updated.breaks);
+  }
+
+  BadmintonRoundModel resumeFromBreak() {
+    final manager = BreakManager(breaks: breaks);
+    final updated = manager.endBreak();
+    return copyWith(breaks: updated.breaks);
   }
 
   @override

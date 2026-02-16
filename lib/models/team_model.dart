@@ -1,7 +1,3 @@
-// =============================================================================
-// TEAM MODEL - Team Information with Players and Scores
-// =============================================================================
-
 import 'player_model.dart';
 
 class BadmintonTeamModel {

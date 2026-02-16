@@ -22,7 +22,7 @@ class ResetFunctions {
     // Reset dialog states
     controller.showServiceDialog.value = false;
     controller.pendingMatch.value = null;
-    controller.createdMatchId.value = '';
+    controller.CreatedMatchAndNevigate.value = '';
     controller.cancelledMatchId.value = '';
     
     // Clear text controllers

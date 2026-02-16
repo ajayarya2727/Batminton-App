@@ -1,6 +1,8 @@
 import 'package:batminton_app/controllers/app_controllers.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import '../match_rule/match_rule_ui_screen.dart';
 import '../match_rule/match_rule_controller.dart';
 import '../matches_list/my_matches_list_controller.dart';
 import '../../models/badminton_models.dart';
@@ -15,7 +17,7 @@ class CreateMatchController extends GetxController {
   final RxString errorMessage = ''.obs;
   final RxBool showServiceDialog = false.obs;
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
-  final RxString createdMatchId = ''.obs;
+  final RxString CreatedMatchAndNevigate = ''.obs;
   final RxString cancelledMatchId = ''.obs;
 
   final List<String> availableLogos = [
@@ -30,7 +32,7 @@ class CreateMatchController extends GetxController {
 
   @override
   void onInit() {
-    super.onInit();
+    super.onInit(); // Initialize player name boxes
     team1PlayerNameBox.add(TextEditingController());
     team2PlayerNameBox.add(TextEditingController());
   }
@@ -43,8 +45,8 @@ class CreateMatchController extends GetxController {
 
     // If need more boxes, add them
     if (team1PlayerNameBox.length < playersPerTeam) {
-      int needMore = playersPerTeam - team1PlayerNameBox.length;
-      for (int i = 0; i < needMore; i++) {
+      int CreateMoreInputBox = playersPerTeam - team1PlayerNameBox.length;
+      for (int i = 0; i < CreateMoreInputBox; i++) {
         team1PlayerNameBox.add(TextEditingController());
         team2PlayerNameBox.add(TextEditingController());
       }
@@ -53,8 +55,8 @@ class CreateMatchController extends GetxController {
 
     // If need less boxes, remove extra ones
     if (team1PlayerNameBox.length > playersPerTeam) {
-      int removeCount = team1PlayerNameBox.length - playersPerTeam;
-      for (int i = 0; i < removeCount; i++) {
+      int RemoveExtraInputBox = team1PlayerNameBox.length - playersPerTeam;
+      for (int i = 0; i < RemoveExtraInputBox ; i++) {
         team1PlayerNameBox.last.dispose();
         team1PlayerNameBox.removeLast();
         team2PlayerNameBox.last.dispose();
@@ -78,16 +80,10 @@ class CreateMatchController extends GetxController {
 
     final requiredPlayers = selectedMatchType.value.requiredPlayersPerTeam;
     
-    // Debug: Print player box counts
-    print('DEBUG: team1PlayerNameBox.length = ${team1PlayerNameBox.length}');
-    print('DEBUG: team2PlayerNameBox.length = ${team2PlayerNameBox.length}');
-    print('DEBUG: requiredPlayers = $requiredPlayers');
-    
     // Get player names from Team 1 (loop will run requiredPlayers times)
     List<String> team1Players = [];
     for (int i = 0; i < team1PlayerNameBox.length; i++) {
       String name = team1PlayerNameBox[i].text.trim();
-      print('DEBUG: Team1 Player $i name = "$name"');
       if (name.isNotEmpty) {
         team1Players.add(name);
       }
@@ -96,15 +92,11 @@ class CreateMatchController extends GetxController {
     // Get player names from Team 2 (loop will run requiredPlayers times)
     List<String> team2Players = [];
     for (int i = 0; i < team2PlayerNameBox.length; i++) {
-      String name = team2PlayerNameBox[i].text.trim();
-      print('DEBUG: Team2 Player $i name = "$name"');
+      String name = team2PlayerNameBox[i].text.trim();//i = index for name
       if (name.isNotEmpty) {
         team2Players.add(name);
       }
     }
-    
-    print('DEBUG: team1Players collected = ${team1Players.length}');
-    print('DEBUG: team2Players collected = ${team2Players.length}');
 
     if (team1Players.length != requiredPlayers) {
       errorMessage.value = 'Please enter all player name for Team 1';
@@ -129,15 +121,15 @@ class CreateMatchController extends GetxController {
       // Create Team 1 players list with unique timestamp IDs
       List<BadmintonPlayerModel> team1PlayersList = [];
       for (int i = 0; i < team1Players.length; i++) {
-        final playerId = '${baseTimestamp}_t1_p${i}'; // Unique ID with counter
+        final playerId = '${baseTimestamp}_team1_player${i}'; // Unique ID with counter
         team1PlayersList.add(
-          BadmintonPlayerModel(
+          BadmintonPlayerModel(//player object
             playerId: playerId,
             name: team1Players[i],
           )
         );
       }
-      
+      //team object
       final team1 = BadmintonTeamModel(
         teamId: 'team_$team1Id',
         teamName: team1Name,
@@ -148,7 +140,7 @@ class CreateMatchController extends GetxController {
       // Create Team 2 players list with unique timestamp IDs
       List<BadmintonPlayerModel> team2PlayersList = [];
       for (int i = 0; i < team2Players.length; i++) {
-        final playerId = '${baseTimestamp}_t2_p${i}'; // Unique ID with counter
+        final playerId = '${baseTimestamp}_team2_player${i}'; // Unique ID with counter
         team2PlayersList.add(
           BadmintonPlayerModel(
             playerId: playerId,
@@ -194,7 +186,7 @@ class CreateMatchController extends GetxController {
       await AppControllers.match.initializeMatchWithService(matchId, initialServer);
       
       // Match is ready, navigate to match screen
-      createdMatchId.value = matchId;
+      CreatedMatchAndNevigate.value = matchId;
       
     } catch (e) {
       errorMessage.value = 'Failed to initialize match. Please try again.';

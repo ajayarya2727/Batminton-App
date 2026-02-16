@@ -42,10 +42,10 @@ class CreateMatchScreen extends StatelessWidget {
     });
 
     // Setup observer for successful match creation and navigation
-    ever(AppControllers.createMatch.createdMatchId, (String matchId) {
+    ever(AppControllers.createMatch.CreatedMatchAndNevigate, (String matchId) {
       if (matchId.isNotEmpty) {
         Get.off(() => MatchDetailScreen(matchId: matchId)); // Replace current screen with match screen
-        AppControllers.createMatch.createdMatchId.value = '';
+        AppControllers.createMatch.CreatedMatchAndNevigate.value = '';
       }
     });
 

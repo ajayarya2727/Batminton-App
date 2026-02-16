@@ -25,10 +25,6 @@ class BadmintonPlayerModel {
       'playerId': playerId,
       'name': name,
       'currentRoundScore': currentRoundScore,
-      'totalMatchScore': totalMatchScore,
-      'roundScores': roundScores,
-      'roundsWon': roundsWon,
-      'roundsLost': roundsLost,
       'isCurrentServer': isCurrentServer,
     };
   }

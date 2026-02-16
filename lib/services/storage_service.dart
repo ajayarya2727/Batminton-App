@@ -4,12 +4,12 @@ import 'package:path_provider/path_provider.dart';
 import '../models/badminton_models.dart';
 
 class StorageService {
-  static const String _matchesFolder = 'matches';
+  static const String _allMatches = 'matches';
   
   /// Get or create the matches storage directory
   static Future<Directory> _getMatchesDirectory() async {
     final appDir = await getApplicationDocumentsDirectory();
-    final matchesDir = Directory('${appDir.path}/$_matchesFolder');
+    final matchesDir = Directory('${appDir.path}/$_allMatches');
     
     if (!await matchesDir.exists()) {
       await matchesDir.create(recursive: true);
@@ -19,16 +19,21 @@ class StorageService {
   }
   
   /// Save a match to its JSON file
-  static Future<void> saveMatchToStorage(BadmintonMatchModel match) async {
+  static Future<void> saveMatchToStorage(BadmintonMatchModel matchmodel) async {
     try {
       final matchesDir = await _getMatchesDirectory();
-      final matchFile = File('${matchesDir.path}/${match.matchId}.json');
+      final matchFile = File('${matchesDir.path}/${matchmodel.matchId}.json');
       
-      final matchJson = json.encode(match.toJson());
+      final matchJson = json.encode(matchmodel.toJson());
       await matchFile.writeAsString(matchJson);
     } catch (e) {
-      throw Exception('Failed to save match ${match.matchId}: $e');
+      throw Exception('Failed to save match ${matchmodel.matchId}: $e');
     }
+  }
+  
+  /// Save live match JSON (same as saveMatchToStorage, for logging purposes)
+  static Future<void> saveLiveMatchJson(BadmintonMatchModel match) async {
+    await saveMatchToStorage(match);
   }
   
   /// Load a single match by ID

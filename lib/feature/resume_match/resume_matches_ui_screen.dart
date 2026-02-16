@@ -4,32 +4,8 @@ import '../../models/badminton_models.dart';
 import '../match_rule/match_rule_ui_screen.dart';
 import '../../controllers/app_controllers.dart';
 
-class ResumeMatchesScreen extends StatefulWidget {
+class ResumeMatchesScreen extends StatelessWidget {
   const ResumeMatchesScreen({super.key});
-
-  @override
-  State<ResumeMatchesScreen> createState() => _ResumeMatchesScreenState();
-}
-
-class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
-  @override
-  void initState() {
-    super.initState();
-    
-    // Setup error message listener
-    ever(AppControllers.resumeMatch.errorMessage, (String message) {
-      if (message.isNotEmpty) {
-        Get.snackbar(
-          'Error',
-          message,
-          backgroundColor: Colors.red.shade100,
-          colorText: Colors.red.shade700,
-          icon: Icon(Icons.error, color: Colors.red.shade700),
-        );
-        AppControllers.resumeMatch.errorMessage.value = '';
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +24,7 @@ class _ResumeMatchesScreenState extends State<ResumeMatchesScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final resumableMatches = AppControllers.resumeMatch.resumableMatches;
+        final resumableMatches = AppControllers.resumeMatch.resumeMatches;
 
         if (resumableMatches.isEmpty) {
           return _buildEmptyState();
