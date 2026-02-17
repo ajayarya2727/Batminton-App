@@ -157,7 +157,7 @@ class MatchesListScreen extends StatelessWidget {
   }
 
   Widget _buildStatusBadge(BadmintonMatchModel match) {
-    if (match.isCompleted) {
+    if (AppControllers.match.isMatchCompleted(match)) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -203,7 +203,7 @@ class MatchesListScreen extends StatelessWidget {
   Widget _buildMatchScore(BadmintonMatchModel match) {
     return Row(
       children: [
-        Expanded(child: _buildTeamInfo(match.team1, match.team1Players, true)),
+        Expanded(child: _buildTeamInfo(match.team1, AppControllers.match.getTeam1Players(match), true)),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -211,7 +211,7 @@ class MatchesListScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            '${match.team1Score} - ${match.team2Score}',
+            '${AppControllers.match.getTeam1Score(match)} - ${AppControllers.match.getTeam2Score(match)}',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -219,7 +219,7 @@ class MatchesListScreen extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(child: _buildTeamInfo(match.team2, match.team2Players, false)),
+        Expanded(child: _buildTeamInfo(match.team2, AppControllers.match.getTeam2Players(match), false)),
       ],
     );
   }

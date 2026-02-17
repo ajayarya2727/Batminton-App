@@ -9,11 +9,6 @@ class ResumeMatchesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Force refresh when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppControllers.resumeMatch.refreshMatches();
-    });
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -25,20 +20,23 @@ class ResumeMatchesScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: Obx(() {
+        final allMatches = AppControllers.myMatches.matches;
         
-        if (AppControllers.resumeMatch.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // ✅ Use the observable list directly
-        final resumableMatches = AppControllers.resumeMatch.resumableMatches;
+        final resumableMatches = allMatches.where((match) {
+          return match.status == BadmintonMatchStatus.inProgress || 
+                 match.status == BadmintonMatchStatus.paused;
+        }).toList();
+        
+        resumableMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (resumableMatches.isEmpty) {
           return _buildEmptyState();
         }
 
         return RefreshIndicator(
-          onRefresh: AppControllers.resumeMatch.refreshMatches,
+          onRefresh: () async {
+            await AppControllers.myMatches.loadMatches();
+          },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: resumableMatches.length,
@@ -187,8 +185,8 @@ class ResumeMatchesScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            match.team1Players.isNotEmpty 
-                                ? match.team1Players.join(' & ')
+                            AppControllers.match.getTeam1Players(match).isNotEmpty 
+                                ? AppControllers.match.getTeam1Players(match).join(' & ')
                                 : 'Team 1',
                             style: const TextStyle(
                               fontSize: 16,
@@ -210,7 +208,7 @@ class ResumeMatchesScreen extends StatelessWidget {
                         border: Border.all(color: Colors.red.shade200),
                       ),
                       child: Text(
-                        '${match.team1Score} - ${match.team2Score}',
+                        '${AppControllers.match.getTeam1Score(match)} - ${AppControllers.match.getTeam2Score(match)}',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -248,8 +246,8 @@ class ResumeMatchesScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            match.team2Players.isNotEmpty 
-                                ? match.team2Players.join(' & ')
+                            AppControllers.match.getTeam2Players(match).isNotEmpty 
+                                ? AppControllers.match.getTeam2Players(match).join(' & ')
                                 : 'Team 2',
                             style: const TextStyle(
                               fontSize: 16,

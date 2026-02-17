@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../../models/badminton_models.dart';
 import '../../services/storage_service.dart';
+import '../../controllers/app_controllers.dart';
 
 class ResumeMatchController extends GetxController {
   // All matches loaded from storage
@@ -40,8 +41,8 @@ class ResumeMatchController extends GetxController {
         print('  📄 Match: ${match.matchId}');
         print('     Teams: ${match.team1.teamName} vs ${match.team2.teamName}');
         print('     Status: ${match.status.code}');
-        print('     isCompleted: ${match.isCompleted}');
-        print('     isInProgress: ${match.isInProgress}');
+        print('     isCompleted: ${AppControllers.match.isMatchCompleted(match)}');
+        print('     isInProgress: ${AppControllers.match.isMatchInProgress(match)}');
       }
       
       // Filter and update resumable matches
@@ -63,7 +64,6 @@ class ResumeMatchController extends GetxController {
   void _updateResumableMatches() {
     print('🔍 [ResumeMatch] Filtering ${allMatches.length} matches...');
     
-    // Filter: Show only inProgress or paused matches
     final filtered = allMatches.where((match) {
       final isInProgress = match.status == BadmintonMatchStatus.inProgress;
       final isPaused = match.status == BadmintonMatchStatus.paused;
