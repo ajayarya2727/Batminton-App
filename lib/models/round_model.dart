@@ -62,7 +62,7 @@ class BadmintonRoundModel {
       'completedAt': completedAt?.toIso8601String(),
       'currentServer': currentServer,
       'initialServer': initialServer,
-      'breaks': breaks.map((b) => b.toJson()).toList(),
+      'breaks': breaks.map((breakrecord) => breakrecord.toJson()).toList(),
       'breakCount': breakCount,
       'totalBreakDurationSeconds': totalBreakDurationSeconds,
     };

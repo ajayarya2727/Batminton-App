@@ -1,10 +1,7 @@
 import 'package:batminton_app/controllers/app_controllers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../match_rule/match_rule_ui_screen.dart';
-import '../match_rule/match_rule_controller.dart';
-import '../matches_list/my_matches_list_controller.dart';
 import '../../models/badminton_models.dart';
 
 class CreateMatchController extends GetxController {

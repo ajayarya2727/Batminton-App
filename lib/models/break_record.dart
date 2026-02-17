@@ -1,9 +1,3 @@
-// =============================================================================
-// BREAK RECORD MODEL - Individual Break Information
-// =============================================================================
-
-/// Represents a single break taken during a round
-/// Supports multiple breaks per round with independent tracking
 class BreakRecord {
   final DateTime startTime;
   final DateTime? endTime;
@@ -17,9 +11,6 @@ class BreakRecord {
 
   // Check if break is currently active (not ended yet)
   bool get isActive => endTime == null;
-  
-  // Check if break is completed
-  bool get isCompleted => endTime != null;
 
   // JSON serialization
   Map<String, dynamic> toJson() {
@@ -56,7 +47,7 @@ class BreakRecord {
 
   // End the break and calculate duration
   BreakRecord end() {
-    if (isCompleted) return this; // Already ended
+    if (!isActive) return this; // Already ended
     
     final now = DateTime.now();
     final duration = now.difference(startTime).inSeconds;
@@ -70,9 +61,6 @@ class BreakRecord {
   String toString() => 'BreakRecord(start: $startTime, end: $endTime, duration: ${durationSeconds}s)';
 }
 
-// =============================================================================
-// BREAK MANAGER - Helper class for managing multiple breaks
-// =============================================================================
 
 /// Helper class to manage multiple breaks in a round
 class BreakManager {

@@ -1149,11 +1149,13 @@ class MatchDetailScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: () {
+        onPressed: () async {
           if (isPaused) {
-            AppControllers.match.resumeMatch(match.matchId);
+            await AppControllers.match.resumeMatch(match.matchId);
           } else {
-            _showBreakDialog(match);
+            await AppControllers.match.pauseMatch(match.matchId);
+
+            _showResumeDialog(match);
           }
         },
         style: ElevatedButton.styleFrom(
@@ -1179,21 +1181,23 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showBreakDialog(BadmintonMatchModel match) {
+  void _showResumeDialog(BadmintonMatchModel match) {
+    AppControllers.match.startBreakStopwatch();
+    
     Get.dialog(
       AlertDialog(
         title: Row(
           children: [
             Icon(Icons.pause_circle, color: Colors.orange.shade600),
             const SizedBox(width: 8),
-            const Text('Take a Break'),
+            const Text('Match Paused'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Do you want to pause this match?',
+              'The match is currently paused.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 12),
@@ -1224,33 +1228,64 @@ class MatchDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            // Live Stopwatch
+            Obx(() => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer,
+                    size: 18,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Break Time: ${AppControllers.match.formatBreakTime(AppControllers.match.breakStopwatch.value)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            )),
             const SizedBox(height: 12),
             const Text(
-              'You can resume the match anytime from where you left off.',
+              'Press Resume Match to continue playing.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Get.back();
-              AppControllers.match.pauseMatch(match.matchId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade600,
-              foregroundColor: Colors.white,
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                AppControllers.match.stopAndResetBreakStopwatch();
+                Get.back(); 
+                await AppControllers.match.resumeMatch(match.matchId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.play_circle, size: 20),
+              label: const Text('Resume Match'),
             ),
-            icon: const Icon(Icons.pause_circle, size: 20),
-            label: const Text('Pause Match'),
           ),
         ],
       ),
+      barrierDismissible: false,
     );
   }
   Widget _buildCompleteButton(BadmintonMatchModel match) {

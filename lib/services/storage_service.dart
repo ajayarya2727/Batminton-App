@@ -31,11 +31,6 @@ class StorageService {
     }
   }
   
-  /// Save live match JSON (same as saveMatchToStorage, for logging purposes)
-  static Future<void> saveLiveMatchJson(BadmintonMatchModel match) async {
-    await saveMatchToStorage(match);
-  }
-  
   /// Load a single match by ID
   static Future<BadmintonMatchModel?> getMatchById(String matchId) async {
     try {

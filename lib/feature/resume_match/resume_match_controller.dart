@@ -33,7 +33,7 @@ class ResumeMatchController extends GetxController {
   }
 
   List<BadmintonMatchModel> get resumeMatches {
-    final matches = _allMatches.value;
+    final matches = _allMatches;
 
     final filteredMatches = matches.where((match) => 
       !match.isCompleted || match.status == BadmintonMatchStatus.paused

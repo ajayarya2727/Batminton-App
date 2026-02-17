@@ -1,7 +1,3 @@
-// =============================================================================
-// SCORECARD MODEL - Player Performance and Statistics
-// =============================================================================
-
 class BadmintonPlayerStats {
   final String playerId;
   final String playerName;

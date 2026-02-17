@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -19,9 +20,10 @@ class MatchController extends GetxController {
   // Pending match for dialogs (stores current match being processed)
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
   
+  final RxInt breakStopwatch = 0.obs;
+  Timer? _breakTimer;
+  
   // ================= INITIALIZATION =================
-
-  // Initialize match with first server
   Future<void> initializeMatchWithService(String matchId, String initialServer) async {
     final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
@@ -39,7 +41,7 @@ class MatchController extends GetxController {
     debugPrint('===================================\n');
   }
   
-  // ================= SCORE LOGIC =================
+  //  SCORE LOGIC 
 
   // Update player score and handle game logic
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
@@ -59,7 +61,7 @@ class MatchController extends GetxController {
     int newTeam1Score = 0;
     int newTeam2Score = 0;
     for (final player in match.team1.players) {
-      newTeam1Score += updatedPlayerScores[player.playerId] ?? 0;//if vcalue null so use 0
+      newTeam1Score += updatedPlayerScores[player.playerId] ?? 0;//if value null so use 0
     }
     for (final player in match.team2.players) {
       newTeam2Score += updatedPlayerScores[player.playerId] ?? 0;
@@ -165,10 +167,7 @@ class MatchController extends GetxController {
     await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
     _printJsonWithTag('badminton.server_change', AppControllers.myMatches.matches[matchIndex].toJson());
   }
-  
-  // ================= ROUND LOGIC =================
-
-  // ================= ROUND LOGIC =================
+  //  ROUND LOGIC 
 
   // Complete current round
   Future<void> completeCurrentRound(String matchId, String roundWinner, int team1Score, int team2Score) async {
@@ -259,10 +258,7 @@ class MatchController extends GetxController {
     await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
     _printJsonWithTag('badminton.round_start', AppControllers.myMatches.matches[matchIndex].toJson());
   }
-  
-  // ================= BREAK LOGIC =================
-
-  // ================= BREAK LOGIC =================
+  // BREAK LOGIC 
 
   // Pause match
   Future<void> pauseMatch(String matchId) async {
@@ -318,7 +314,7 @@ class MatchController extends GetxController {
     }
   }
   
-  // ================= MATCH UPDATE HELPER =================
+  //  MATCH UPDATE HELPER 
 
   // Manually complete match
   Future<void> completeMatch(String matchId) async {
@@ -347,14 +343,43 @@ class MatchController extends GetxController {
     }
   }
   
-  // ================= JSON LOGGING =================
+  void startBreakStopwatch() {
+    breakStopwatch.value = 0;
+    _breakTimer?.cancel(); 
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      breakStopwatch.value++;
+    });
+  }
+  
+  void stopAndResetBreakStopwatch() {
+    _breakTimer?.cancel();
+    _breakTimer = null;
+    breakStopwatch.value = 0;
+  }
+  
+  
+  String formatBreakTime(int seconds) {
+  final hours = seconds ~/ 3600; 
+  final minutes = (seconds % 3600) ~/ 60;
+  final remainingSeconds = seconds % 60; 
 
-  // ================= JSON LOGGING =================
+  return '${hours.toString().padLeft(2, '0')}:'
+         '${minutes.toString().padLeft(2, '0')}:'
+         '${remainingSeconds.toString().padLeft(2, '0')}';
+}
+  
+  @override
+  void onClose() {
+    _breakTimer?.cancel();
+    super.onClose();
+  }
+  
+  // ================= JSON LOGGING ================= 
 
   /// Save live match JSON to file
   Future<void> _saveLiveMatchJson(BadmintonMatchModel match) async {
     try {
-      await StorageService.saveLiveMatchJson(match);
+      await StorageService.saveMatchToStorage(match);
     } catch (e) {
       print('Error saving live match JSON: $e');
     }

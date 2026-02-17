@@ -14,6 +14,7 @@ class BadmintonMatchModel {
   final List<BadmintonRoundModel> rounds;
   final String? winnerId;
 
+
   const BadmintonMatchModel({
     required this.matchId,
     required this.matchType,
@@ -188,7 +189,7 @@ class BadmintonMatchModel {
       'status': status.code,
       'matchCreatedAt': createdAt.toIso8601String(),
       'currentRoundNumber': currentRoundNumber,
-      'rounds': rounds.map((r) => r.toJson()).toList(),
+      'rounds': rounds.map((roundmodel) => roundmodel.toJson()).toList(),
       'winnerTeam': winnerTeamName,
     };
   }
@@ -244,6 +245,7 @@ class BadmintonMatchModel {
       currentRoundNumber: currentRoundNumber ?? this.currentRoundNumber,
       rounds: rounds ?? this.rounds,
       winnerId: winnerId ?? this.winnerId,
+
     );
   }
 

@@ -17,12 +17,6 @@ class BadmintonTeamModel {
   String get displayName => teamName.isNotEmpty ? teamName : players.map((p) => p.name).join(' & ');
   int get playersCount => players.length;
 
-  // Validation
-  bool isValidForMatchType(int requiredPlayers) {
-    return players.length == requiredPlayers && 
-           players.every((player) => player.name.trim().isNotEmpty);
-  }
-
   // JSON serialization
   Map<String, dynamic> toJson() {
     return {
