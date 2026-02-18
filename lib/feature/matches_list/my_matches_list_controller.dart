@@ -73,25 +73,25 @@ class MyMatchesController extends GetxController {
 
   // Add new match (used by CreateMatchController)
   Future<void> addMatch(BadmintonMatchModel match) async {
-    print('➕ [MyMatches] Adding match: ${match.matchId}');
+    print('[MyMatches] Adding match: ${match.matchId}');
     matches.add(match);
     await StorageService.saveMatchToStorage(match);
     successMessage.value = 'Match created successfully!';
     
     // ✅ CRITICAL: Refresh resume match controller
-    print('🔄 [MyMatches] Refreshing ResumeMatchController...');
+    print('[MyMatches] Refreshing ResumeMatchController...');
     try {
       await AppControllers.resumeMatch.refreshMatches();
-      print('✅ [MyMatches] Resume matches refreshed');
+      print('[MyMatches] Resume matches refreshed');
     } catch (e) {
-      print('❌ [MyMatches] Failed to refresh resume: $e');
+      print('[MyMatches] Failed to refresh resume: $e');
     }
   }
 
   // Delete match (used by CreateMatchController for cancellation)
   Future<void> deleteMatch(String matchId) async {
     try {
-      print('🗑️ [MyMatches] Deleting match: $matchId');
+      print('[MyMatches] Deleting match: $matchId');
       matches.removeWhere((match) => match.matchId == matchId);
       await StorageService.deleteMatchFromStorage(matchId);
       successMessage.value = 'Match deleted successfully!';
@@ -99,7 +99,7 @@ class MyMatchesController extends GetxController {
       // Refresh resume match controller
       await AppControllers.resumeMatch.refreshMatches();
     } catch (e) {
-      print('❌ [MyMatches] Delete error: $e');
+      print('[MyMatches] Delete error: $e');
       errorMessage.value = 'Failed to delete match';
     }
   }

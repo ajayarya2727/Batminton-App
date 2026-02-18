@@ -11,79 +11,6 @@ class MatchDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Controllers already initialized in AppControllers
-    
-    ever(AppControllers.match.showManualServiceDialog, (bool show) {
-  if (show && AppControllers.match.pendingMatch.value != null) {
-    _showManualServiceSelectionDialog(
-      context,
-      AppControllers.match.pendingMatch.value!,
-    );
-    AppControllers.match.showManualServiceDialog.value = false;
-  }
-});
-
-    ever(AppControllers.match.showContinueDialog, (bool show) {
-      if (show && AppControllers.match.pendingMatch.value != null) {
-        final match = AppControllers.match.pendingMatch.value!;
-        _showContinueDialog(
-          context,
-          matchId,
-          AppControllers.match.getTeam1Score(match),  // Directly from match
-          AppControllers.match.getTeam2Score(match),  // Directly from match
-        );
-        AppControllers.match.showContinueDialog.value = false;
-      }
-    });
-
-    ever(AppControllers.match.showRoundCompleteDialog, (bool show) {
-      if (show && AppControllers.match.pendingMatch.value != null) {
-        final match = AppControllers.match.pendingMatch.value!;
-        // Get the last completed round to find winner
-        final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
-        final roundWinner = lastCompletedRound.winnerId ?? '';
-        
-        _showRoundCompleteDialog(
-          context,
-          matchId,
-          roundWinner,                    // From last completed round
-          lastCompletedRound.roundNumber, // From last completed round
-          lastCompletedRound.team1Score,  // From last completed round
-          lastCompletedRound.team2Score,  // From last completed round
-        );
-        AppControllers.match.showRoundCompleteDialog.value = false;
-      }
-    });
-
-    ever(AppControllers.match.showNextRoundServiceDialog, (bool show) {
-      if (show && AppControllers.match.pendingMatch.value != null) {
-        final match = AppControllers.match.pendingMatch.value!;
-        // Get the last completed round winner as default server
-        final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
-        final defaultServer = lastCompletedRound.winnerId ?? '';
-        
-        _showNextRoundServiceDialog(
-          context,
-          matchId,
-          defaultServer,  // From last completed round winner
-        );
-        AppControllers.match.showNextRoundServiceDialog.value = false;
-      }
-    });
-
-    ever(AppControllers.match.showMatchCompleteDialog, (bool show) {
-      if (show && AppControllers.match.pendingMatch.value != null) {
-        final match = AppControllers.match.pendingMatch.value!;
-        _showMatchCompleteDialog(
-          context,
-          AppControllers.match.getMatchWinner(match) ?? '',  // Directly from match
-          AppControllers.match.getTeam1RoundsWon(match),     // Directly from match
-          AppControllers.match.getTeam2RoundsWon(match),     // Directly from match
-        );
-        AppControllers.match.showMatchCompleteDialog.value = false;
-      }
-    });
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -102,47 +29,134 @@ class MatchDetailScreen extends StatelessWidget {
         ),
 
       ),
-      body: Obx(() {
-        final match = AppControllers.myMatches.getMatchById(matchId);
-        
-        if (match == null) {
-          return const Center(
-            child: Text(
-              'Match not found',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-          );
-        }
+      body: Stack(
+        children: [
+          Obx(() {
+            final match = AppControllers.myMatches.getMatchById(matchId);
+            
+            if (match == null) {
+              return const Center(
+                child: Text(
+                  'Match not found',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              );
+            }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMatchHeader(match),
-              const SizedBox(height: 24),
-              // Add round history if there are completed rounds
-              if (AppControllers.match.getRoundScores(match).isNotEmpty) ...[
-                _buildRoundHistory(match),
-                const SizedBox(height: 24),
-              ],
-              _buildScoreSection(match),
-              const SizedBox(height: 24),
-              // Add manual service selection button for in-progress matches
-              if (!AppControllers.match.isMatchCompleted(match) && match.rounds.isNotEmpty) _buildManualServiceButton(match),
-              const SizedBox(height: 16),
-              // Add break/resume button for in-progress matches
-              if (!AppControllers.match.isMatchCompleted(match)) _buildBreakResumeButton(match),
-              const SizedBox(height: 16),
-              _buildMatchInfo(match),
-              const SizedBox(height: 24),
-              _buildScorecard(match),
-              const SizedBox(height: 24),
-              if (!AppControllers.match.isMatchCompleted(match)) _buildCompleteButton(match),
-            ],
-          ),
-        );
-      }),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMatchHeader(match),
+                  const SizedBox(height: 24),
+                  // Add round history if there are completed rounds
+                  if (AppControllers.match.getRoundScores(match).isNotEmpty) ...[
+                    _buildRoundHistory(match),
+                    const SizedBox(height: 24),
+                  ],
+                  _buildScoreSection(match),
+                  const SizedBox(height: 24),
+                  // Add manual service selection button for in-progress matches
+                  if (!AppControllers.match.isMatchCompleted(match) && match.rounds.isNotEmpty) _buildManualServiceButton(match),
+                  const SizedBox(height: 16),
+                  // Add break/resume button for in-progress matches
+                  if (!AppControllers.match.isMatchCompleted(match)) _buildBreakResumeButton(match),
+                  const SizedBox(height: 16),
+                  _buildMatchInfo(match),
+                  const SizedBox(height: 24),
+                  _buildScorecard(match),
+                  const SizedBox(height: 24),
+                  if (!AppControllers.match.isMatchCompleted(match)) _buildCompleteButton(match),
+                ],
+              ),
+            );
+          }),
+          
+          // Dialog listeners as separate Obx widgets
+          Obx(() {
+            if (AppControllers.match.showInfoDialog.value) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final message = AppControllers.match.infoDialogMessage.value;
+                debugPrint('📢 Info dialog triggered with message: "$message"');
+                _showInfoDialog(message);
+                AppControllers.match.showInfoDialog.value = false;
+              });
+            }
+            return const SizedBox.shrink();
+          }),
+          
+          Obx(() {
+            if (AppControllers.match.showRoundCompleteDialog.value && AppControllers.match.pendingMatch.value != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final match = AppControllers.match.pendingMatch.value!;
+                debugPrint('🔔 Round complete dialog triggered');
+                final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
+                final roundWinner = lastCompletedRound.winnerId ?? '';
+                
+                _showRoundCompleteDialog(
+                  matchId,
+                  roundWinner,
+                  lastCompletedRound.roundNumber,
+                  lastCompletedRound.team1Score,
+                  lastCompletedRound.team2Score,
+                );
+                AppControllers.match.showRoundCompleteDialog.value = false;
+              });
+            }
+            return const SizedBox.shrink();
+          }),
+          
+          Obx(() {
+            if (AppControllers.match.showNextRoundServiceDialog.value && AppControllers.match.pendingMatch.value != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final match = AppControllers.match.pendingMatch.value!;
+                final lastCompletedRound = match.rounds.lastWhere((r) => r.isCompleted);
+                final defaultServer = lastCompletedRound.winnerId ?? '';
+                
+                _showNextRoundServiceDialog(
+                  matchId,
+                  defaultServer,
+                );
+                AppControllers.match.showNextRoundServiceDialog.value = false;
+              });
+            }
+            return const SizedBox.shrink();
+          }),
+          
+          Obx(() {
+            if (AppControllers.match.showMatchCompleteDialog.value && AppControllers.match.pendingMatch.value != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final match = AppControllers.match.pendingMatch.value!;
+                final winnerId = AppControllers.match.getMatchWinner(match) ?? '';
+                final winnerName = winnerId == 'team1' 
+                    ? (match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1')
+                    : (match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2');
+                
+                _showMatchCompleteDialog(
+                  winnerName,
+                  AppControllers.match.getTeam1RoundsWon(match),
+                  AppControllers.match.getTeam2RoundsWon(match),
+                );
+                AppControllers.match.showMatchCompleteDialog.value = false;
+              });
+            }
+            return const SizedBox.shrink();
+          }),
+          
+          Obx(() {
+            if (AppControllers.match.showManualServiceDialog.value && AppControllers.match.pendingMatch.value != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showManualServiceSelectionDialog(
+                  AppControllers.match.pendingMatch.value!,
+                );
+                AppControllers.match.showManualServiceDialog.value = false;
+              });
+            }
+            return const SizedBox.shrink();
+          }),
+        ],
+      ),
     );
   }
 
@@ -253,7 +267,7 @@ class MatchDetailScreen extends StatelessWidget {
                         children: [
                           Text(
                             match.team1.teamLogo,
-                            style: const TextStyle(fontSize: 20),
+                            style: TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 8),
                           Flexible(
@@ -290,7 +304,7 @@ class MatchDetailScreen extends StatelessWidget {
                               Flexible(
                                 child: Text(
                                   match.team1.players[i].name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -318,7 +332,7 @@ class MatchDetailScreen extends StatelessWidget {
                       Text(
                         '${AppControllers.match.getTeam1Score(match)} - ${AppControllers.match.getTeam2Score(match)}',
                         key: ValueKey('score-${match.matchId}-${match.currentRoundNumber}'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -358,7 +372,7 @@ class MatchDetailScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             match.team2.teamLogo,
-                            style: const TextStyle(fontSize: 20),
+                            style: TextStyle(fontSize: 20),
                           ),
                         ],
                       ),
@@ -373,7 +387,7 @@ class MatchDetailScreen extends StatelessWidget {
                               Flexible(
                                 child: Text(
                                   match.team2.players[i].name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -547,7 +561,7 @@ class MatchDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Winner: ${_getMatchWinner(match)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -601,11 +615,11 @@ class MatchDetailScreen extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(match.team1.teamLogo, style: const TextStyle(fontSize: 16)),
+                                  Text(match.team1.teamLogo, style: TextStyle(fontSize: 16)),
                                   const SizedBox(width: 6),
                                   Text(
                                     match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -625,7 +639,7 @@ class MatchDetailScreen extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text(
                                 '${AppControllers.match.getTeam1Score(match)} pts',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -656,13 +670,13 @@ class MatchDetailScreen extends StatelessWidget {
                                 children: [
                                   Text(
                                     match.team2.teamName.isNotEmpty ? match.team2.teamName : 'Team 2',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(match.team2.teamLogo, style: const TextStyle(fontSize: 16)),
+                                  Text(match.team2.teamLogo, style: TextStyle(fontSize: 16)),
                                 ],
                               ),
                               const SizedBox(height: 6),
@@ -678,7 +692,7 @@ class MatchDetailScreen extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text(
                                 '${AppControllers.match.getTeam2Score(match)} pts',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -771,7 +785,7 @@ class MatchDetailScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                      Text(match.team1.teamLogo, style: TextStyle(fontSize: 18)),
                       const SizedBox(width: 8),
                       Text(
                         match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
@@ -817,7 +831,7 @@ class MatchDetailScreen extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   player.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -842,14 +856,14 @@ class MatchDetailScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey.shade300),
                                   borderRadius: BorderRadius.circular(6),
-                                  color: playerScore >= 10 ? Colors.green.shade50 : Colors.white,
+                                  color: Colors.white,
                                 ),
                                 child: Text(
                                   '$playerScore',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: playerScore >= 10 ? Colors.green.shade700 : Colors.black,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
@@ -896,7 +910,7 @@ class MatchDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                      Text(match.team2.teamLogo, style: TextStyle(fontSize: 18)),
                       const Spacer(),
                       Text(
                         'Team Total: ${AppControllers.match.getTeam2Score(match)}',
@@ -933,7 +947,7 @@ class MatchDetailScreen extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   player.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -958,14 +972,14 @@ class MatchDetailScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey.shade300),
                                   borderRadius: BorderRadius.circular(6),
-                                  color: playerScore >= 10 ? Colors.green.shade50 : Colors.white,
+                                  color: Colors.white,
                                 ),
                                 child: Text(
                                   '$playerScore',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: playerScore >= 10 ? Colors.green.shade700 : Colors.black,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
@@ -1045,7 +1059,7 @@ class MatchDetailScreen extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1172,7 +1186,7 @@ class MatchDetailScreen extends StatelessWidget {
         ),
         label: Text(
           isPaused ? 'Resume Match' : 'Take a Break',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -1212,7 +1226,7 @@ class MatchDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Current Score: ${AppControllers.match.getTeam1Score(match)} - ${AppControllers.match.getTeam2Score(match)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1512,13 +1526,13 @@ class MatchDetailScreen extends StatelessWidget {
             children: [
               Text(
                 teamStats.teamLogo,
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   teamStats.teamName.isNotEmpty ? teamStats.teamName : teamLabel,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1555,7 +1569,7 @@ class MatchDetailScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       teamStats.playerStats[i].playerName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1593,7 +1607,7 @@ class MatchDetailScreen extends StatelessWidget {
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
@@ -1607,88 +1621,92 @@ class MatchDetailScreen extends StatelessWidget {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  // Dialog Methods
-  void _showContinueDialog(
-    BuildContext context,
-    String matchId,
-    int team1Score,
-    int team2Score,
-  ) {
-    final match = AppControllers.myMatches.getMatchById(matchId);
-    if (match == null) return;
+  void _showInfoDialog(String message) {
+    final displayMessage = message.isEmpty 
+        ? "Game continues!\n\n2-point lead is required to win the round." 
+        : message;
     
-    final winnerPlayer = team1Score == 21 ? AppControllers.match.getTeam1Players(match).join(' & ') : AppControllers.match.getTeam2Players(match).join(' & ');
+    debugPrint('🎨 Showing dialog with message: "$displayMessage"');
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('🏸 21 Points Reached! (Round ${match.currentRoundNumber})'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$winnerPlayer reached 21 points!',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(8),
+    Get.dialog(
+      AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                child: Text(
-                  'Round ${match.currentRoundNumber} Score: $team1Score - $team2Score',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                const SizedBox(width: 12),
+                const Text(
+                  'Game Info',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              displayMessage,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Do you want to continue this round?',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Get.back(); // Close dialog
-                final roundWinner = team1Score == 21 ? 'team1' : 'team2';
-                AppControllers.match.completeCurrentRound(matchId, roundWinner, team1Score, team2Score);
-              },
-              child: const Text('No, End Round'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Get.back(); // Close dialog
-                
-                // Mark that user chose to continue to 30
-                await AppControllers.match.markContinueTo30(matchId);
-                
-                Get.snackbar(
-                  'Continue Playing',
-                  'Round continues to 30 points...',
-                  backgroundColor: Colors.blue.shade100,
-                  colorText: Colors.blue.shade700,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 2,
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-              child: const Text('Yes, Continue'),
             ),
           ],
-        );
-      },
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+      barrierDismissible: true,
     );
   }
 
   void _showRoundCompleteDialog(
-    BuildContext context,
     String matchId,
     String roundWinner,
     int roundNumber,
@@ -1700,18 +1718,15 @@ class MatchDetailScreen extends StatelessWidget {
     
     final winnerName = roundWinner == 'team1' ? AppControllers.match.getTeam1Players(match).join(' & ') : AppControllers.match.getTeam2Players(match).join(' & ');
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('🎯 Round $roundNumber Complete!'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
+    Get.dialog(
+      AlertDialog(
+        title: Text('🎯 Round $roundNumber Complete!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
                 '$winnerName won Round $roundNumber!',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Container(
@@ -1722,13 +1737,13 @@ class MatchDetailScreen extends StatelessWidget {
                 ),
                 child: Text(
                   'Round $roundNumber Score: $team1Score - $team2Score',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 'Match Score: ${AppControllers.match.getTeam1RoundsWon(match)} - ${AppControllers.match.getTeam2RoundsWon(match)}',
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 12),
               Container(
@@ -1762,14 +1777,14 @@ class MatchDetailScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                Get.back(); // Close dialog
+                Get.back();
                 AppControllers.match.triggerNextRoundServiceDialog(matchId);
               },
               child: const Text('Change Service'),
             ),
             ElevatedButton(
               onPressed: () {
-                Get.back(); // Close dialog
+                Get.back();
                 AppControllers.match.startNextRound(matchId);
               },
               style: ElevatedButton.styleFrom(
@@ -1779,24 +1794,20 @@ class MatchDetailScreen extends StatelessWidget {
               child: const Text('Continue to Next Round'),
             ),
           ],
-        );
-      },
+        ),
+      barrierDismissible: false,
     );
   }
 
   void _showNextRoundServiceDialog(
-    BuildContext context,
     String matchId,
     String defaultServer,
   ) {
     final match = AppControllers.myMatches.getMatchById(matchId);
     if (match == null) return;
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
+    Get.dialog(
+      AlertDialog(
           title: Text('🏸 Round ${match.currentRoundNumber + 1} Service'),
           content: SingleChildScrollView(
             child: Column(
@@ -1823,7 +1834,7 @@ class MatchDetailScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team1.teamLogo, style: TextStyle(fontSize: 18)),
                           const SizedBox(width: 8),
                           Text(
                             match.team1.teamName.isNotEmpty ? match.team1.teamName : 'Team 1',
@@ -1889,7 +1900,7 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team2.teamLogo, style: TextStyle(fontSize: 18)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -1923,22 +1934,18 @@ class MatchDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
+        ),
+      barrierDismissible: false,
     );
   }
 
   void _showMatchCompleteDialog(
-    BuildContext context,
     String matchWinner,
     int team1Rounds,
     int team2Rounds,
   ) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
+    Get.dialog(
+      Dialog(
           insetPadding: const EdgeInsets.all(16),
           child: Container(
             width: double.infinity,
@@ -1976,7 +1983,7 @@ class MatchDetailScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Winner: $matchWinner',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -2042,21 +2049,17 @@ class MatchDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
+        ),
+      barrierDismissible: false,
     );
   }
 
 
   void _showServiceSelectionDialog(
-    BuildContext context,
     BadmintonMatchModel match,
   ) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
+    Get.dialog(
+      AlertDialog(
           title: const Text('🏸 Select First Server'),
           content: SingleChildScrollView(
             child: Column(
@@ -2083,7 +2086,7 @@ class MatchDetailScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team1.teamLogo, style: TextStyle(fontSize: 18)),
                           const SizedBox(width: 8),
                           Text(
                             match.team1.teamName.isNotEmpty ? match.team1.teamName : "Team 1",
@@ -2149,7 +2152,7 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team2.teamLogo, style: TextStyle(fontSize: 18)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -2183,19 +2186,16 @@ class MatchDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-        );
-      },
+        ),
+      barrierDismissible: false,
     );
   }
 
   void _showManualServiceSelectionDialog(
-    BuildContext context,
     BadmintonMatchModel match,
   ) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
+    Get.dialog(
+      AlertDialog(
           title: const Text('🏸 Change Service'),
           content: SingleChildScrollView(
             child: Column(
@@ -2203,12 +2203,12 @@ class MatchDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   'Current Round: ${match.currentRoundNumber}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Current Score: ${AppControllers.match.getTeam1Score(match)} - ${AppControllers.match.getTeam2Score(match)}',
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 14),
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -2232,7 +2232,7 @@ class MatchDetailScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(match.team1.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team1.teamLogo, style: TextStyle(fontSize: 18)),
                           const SizedBox(width: 8),
                           Text(
                             match.team1.teamName.isNotEmpty ? match.team1.teamName : "Team 1",
@@ -2278,7 +2278,7 @@ class MatchDetailScreen extends StatelessWidget {
                                   const SizedBox(width: 8),
                                 Text(
                                   match.team1.players[i].name,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -2313,7 +2313,7 @@ class MatchDetailScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(match.team2.teamLogo, style: const TextStyle(fontSize: 18)),
+                          Text(match.team2.teamLogo, style: TextStyle(fontSize: 18)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -2350,7 +2350,7 @@ class MatchDetailScreen extends StatelessWidget {
                                   const SizedBox(width: 8),
                                 Text(
                                   match.team2.players[i].name,
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -2368,8 +2368,8 @@ class MatchDetailScreen extends StatelessWidget {
               child: const Text('Cancel'),
             ),
           ],
-        );
-      },
+        ),
+      barrierDismissible: true,
     );
   }
 }

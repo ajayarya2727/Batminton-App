@@ -9,10 +9,11 @@ import '../../controllers/app_controllers.dart';
 
 class MatchController extends GetxController {
   final RxBool showManualServiceDialog = false.obs;
-  final RxBool showContinueDialog = false.obs;
   final RxBool showRoundCompleteDialog = false.obs;
   final RxBool showNextRoundServiceDialog = false.obs;
   final RxBool showMatchCompleteDialog = false.obs;
+  final RxBool showInfoDialog = false.obs;
+  final RxString infoDialogMessage = ''.obs;
   final Rx<BadmintonMatchModel?> pendingMatch = Rx<BadmintonMatchModel?>(null);
   
   final RxInt breakStopwatch = 0.obs;
@@ -42,8 +43,6 @@ class MatchController extends GetxController {
       currentServer: initialServer,
       pointSequence: [],
       playerScores: initialPlayerScores,
-      milestone21Reached: false,
-      continueTo30Chosen: false,
     );
     
     final updatedTeam1 = match.team1.copyWith(
@@ -78,21 +77,9 @@ class MatchController extends GetxController {
   }
   
   Future<void> markContinueTo30(String matchId) async {
-    final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
-    if (matchIndex == -1) return;
-    
-    final match = AppControllers.myMatches.matches[matchIndex];
-    
-    final currentRound = getCurrentRound(match);
-    if (currentRound == null) return;
-    
-    final updatedRound = currentRound.copyWith(continueTo30Chosen: true);
-    final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
-    updatedRounds[match.currentRoundNumber - 1] = updatedRound;
-    
-    AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
-    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-    AppControllers.myMatches.matches.refresh();
+    // This method is no longer needed with official rules
+    // Keeping for backward compatibility but does nothing
+    return;
   }
 
   Future<void> updatePlayerScore(String matchId, String playerId, int newPlayerScore) async {
@@ -159,57 +146,52 @@ class MatchController extends GetxController {
     final updatedCurrentRound = getCurrentRound(updatedMatch);
     
     if (updatedCurrentRound != null) {
-      if (updatedCurrentRound.continueTo30Chosen && (newTeam1Score == 30 || newTeam2Score == 30)) {
-        final roundWinner = newTeam1Score == 30 ? 'team1' : 'team2';
+      final scoreDiff = (newTeam1Score - newTeam2Score).abs();
+      bool shouldCompleteRound = false;
+      String? roundWinner;
+      
+      // Check if someone just reached 21 for the FIRST TIME without 2-point lead
+      // Only show popup once when first player reaches 21 (not when both are at 21)
+      if (scoreDiff == 1) {
+        // Exactly 1-point difference
+        if ((newTeam1Score == 21 && previousTeam1Score == 20 && newTeam2Score == 20) ||
+            (newTeam2Score == 21 && previousTeam2Score == 20 && newTeam1Score == 20)) {
+          // First player just reached 21, other is at 20
+          final message = "Game continues!\n\n2-point lead is required to win the round.";
+          infoDialogMessage.value = message;
+          showInfoDialog.value = true;
+        }
+      }
+      
+      // Official Badminton Rules - Automatic Round Completion
+      if (newTeam1Score == 30 || newTeam2Score == 30) {
+        shouldCompleteRound = true;
+        roundWinner = newTeam1Score == 30 ? 'team1' : 'team2';
+      } else if (newTeam1Score >= 21 && newTeam2Score >= 21) {
+        if (scoreDiff >= 2) {
+          shouldCompleteRound = true;
+          roundWinner = newTeam1Score > newTeam2Score ? 'team1' : 'team2';
+        }
+      } else if (newTeam1Score >= 21 && scoreDiff >= 2) {
+        shouldCompleteRound = true;
+        roundWinner = 'team1';
+      } else if (newTeam2Score >= 21 && scoreDiff >= 2) {
+        shouldCompleteRound = true;
+        roundWinner = 'team2';
+      }
+      
+      if (shouldCompleteRound && roundWinner != null) {
         await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
         AppControllers.myMatches.matches.refresh();
         await completeCurrentRound(matchId, roundWinner, newTeam1Score, newTeam2Score);
         return;
       }
-      
-      if ((newTeam1Score > 21 || newTeam2Score > 21) && !updatedCurrentRound.continueTo30Chosen && !updatedCurrentRound.milestone21Reached) {
-        final updatedRound = updatedCurrentRound.copyWith(
-          milestone21Reached: true,
-          continueTo30Chosen: true,
-        );
-        final updatedRounds = List<BadmintonRoundModel>.from(updatedMatch.rounds);
-        updatedRounds[updatedMatch.currentRoundNumber - 1] = updatedRound;
-        AppControllers.myMatches.matches[matchIndex] = updatedMatch.copyWith(rounds: updatedRounds);
-        await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-        AppControllers.myMatches.matches.refresh();
-      }
     }
     
-    bool showPopup = false;
-    if (!isMilestone21Reached(updatedMatch)) {
-      if ((newTeam1Score == 21 && previousTeam1Score < 21) || 
-          (newTeam2Score == 21 && previousTeam2Score < 21)) {
-        showPopup = true;
-      }
-    }
-    
-    if (showPopup) {
-      final match = AppControllers.myMatches.matches[matchIndex];
-      final currentRound = getCurrentRound(match);
-      if (currentRound != null) {
-        final updatedRound = currentRound.copyWith(milestone21Reached: true);
-        final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
-        updatedRounds[match.currentRoundNumber - 1] = updatedRound;
-        AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
-      }
-      
-      await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-      AppControllers.myMatches.matches.refresh();
-      pendingMatch.value = AppControllers.myMatches.matches[matchIndex];
-      showContinueDialog.value = true;
-    } else {
-      await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
-      AppControllers.myMatches.matches.refresh();
-      
-      await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
-      
-      _logScoreUpdate(AppControllers.myMatches.matches[matchIndex]);
-    }
+    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+    await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
+    _logScoreUpdate(AppControllers.myMatches.matches[matchIndex]);
   }
 
   Future<void> manuallySetService(String matchId, String servingPlayerId) async {
@@ -262,10 +244,16 @@ class MatchController extends GetxController {
     
     AppControllers.myMatches.matches[matchIndex] = finalMatch;
     await StorageService.saveMatchToStorage(finalMatch);
+    AppControllers.myMatches.matches.refresh();
     
+    debugPrint('🎯 Setting pendingMatch and triggering dialog...');
     pendingMatch.value = finalMatch;
     
+    // Small delay to ensure UI is ready
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     if (isMatchComplete(finalMatch)) {
+      debugPrint('✅ Match complete - showing match complete dialog');
       debugPrint('\n========== MATCH COMPLETED ==========');
       debugPrint('Match JSON:');
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
@@ -275,6 +263,7 @@ class MatchController extends GetxController {
       
       showMatchCompleteDialog.value = true;
     } else {
+      debugPrint('✅ Round complete - showing round complete dialog');
       debugPrint('ROUND ${finalMatch.currentRoundNumber} COMPLETE: Winner=$roundWinner | Team1 Rounds Won=${getTeam1RoundsWon(finalMatch)}, Team2 Rounds Won=${getTeam2RoundsWon(finalMatch)}');
       
       showRoundCompleteDialog.value = true;
@@ -321,8 +310,6 @@ class MatchController extends GetxController {
       currentServer: nextRoundServer,
       pointSequence: [],
       playerScores: initialPlayerScores,
-      milestone21Reached: false,
-      continueTo30Chosen: false,
       breaks: [],
     );
     
@@ -362,8 +349,6 @@ class MatchController extends GetxController {
       currentServer: initialServer,
       pointSequence: [],
       playerScores: initialPlayerScores,
-      milestone21Reached: false,
-      continueTo30Chosen: false,
       breaks: [],
     );
     
@@ -524,11 +509,6 @@ class MatchController extends GetxController {
     if (team1Wins >= 2) return 'team1';
     if (team2Wins >= 2) return 'team2';
     return null;
-  }
-  
-  bool isMilestone21Reached(BadmintonMatchModel match) {
-    final currentRound = getCurrentRound(match);
-    return currentRound?.milestone21Reached ?? false;
   }
   
   String? getCurrentServer(BadmintonMatchModel match) {

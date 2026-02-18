@@ -41,12 +41,10 @@ class ResetFunctions {
     controller.updatePlayerNameBox(1);
   }
   
-  /// Reset MatchController dialog states
   static void resetMatchDialogs() {
     final controller = AppControllers.match;
     
     controller.showManualServiceDialog.value = false;
-    controller.showContinueDialog.value = false;
     controller.showRoundCompleteDialog.value = false;
     controller.showNextRoundServiceDialog.value = false;
     controller.showMatchCompleteDialog.value = false;
