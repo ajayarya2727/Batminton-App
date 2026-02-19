@@ -57,6 +57,39 @@ class MatchDetailScreen extends StatelessWidget {
                   ],
                   _buildScoreSection(match),
                   const SizedBox(height: 24),
+                  // Undo button - above manual service button
+                  if (!AppControllers.match.isMatchCompleted(match) && match.rounds.isNotEmpty && match.status != BadmintonMatchStatus.paused)
+                    Obx(() => SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: AppControllers.match.scoreHistory.isEmpty
+                            ? null
+                            : () {
+                                AppControllers.match.undoLastScore(match.matchId);
+                              },
+                        icon: const Icon(Icons.undo, size: 20),
+                        label: Text(
+                          AppControllers.match.scoreHistory.isEmpty
+                              ? 'No actions to undo'
+                              : 'Undo Last Score',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppControllers.match.scoreHistory.isEmpty
+                              ? Colors.grey.shade300
+                              : Colors.purple.shade600,
+                          foregroundColor: AppControllers.match.scoreHistory.isEmpty
+                              ? Colors.grey.shade600
+                              : Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    )),
+                  if (!AppControllers.match.isMatchCompleted(match) && match.rounds.isNotEmpty && match.status != BadmintonMatchStatus.paused)
+                    const SizedBox(height: 16),
                   // Add manual service selection button for in-progress matches
                   if (!AppControllers.match.isMatchCompleted(match) && match.rounds.isNotEmpty) _buildManualServiceButton(match),
                   const SizedBox(height: 16),
@@ -837,22 +870,9 @@ class MatchDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              // Score controls
-                              IconButton(
-                                onPressed: isPaused ? null : () {
-                                  if (playerScore > 0) {
-                                    AppControllers.match.updatePlayerScore(
-                                      match.matchId,
-                                      player.playerId,
-                                      playerScore - 1,
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.remove_circle),
-                                color: isPaused ? Colors.grey : Colors.red,
-                              ),
+                              // Score display and add button
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey.shade300),
                                   borderRadius: BorderRadius.circular(6),
@@ -861,12 +881,13 @@ class MatchDetailScreen extends StatelessWidget {
                                 child: Text(
                                   '$playerScore',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               IconButton(
                                 onPressed: isPaused ? null : () {
                                   AppControllers.match.updatePlayerScore(
@@ -877,6 +898,7 @@ class MatchDetailScreen extends StatelessWidget {
                                 },
                                 icon: const Icon(Icons.add_circle),
                                 color: isPaused ? Colors.grey : Colors.green,
+                                iconSize: 32,
                               ),
                             ],
                           ),
@@ -953,22 +975,9 @@ class MatchDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              // Score controls
-                              IconButton(
-                                onPressed: isPaused ? null : () {
-                                  if (playerScore > 0) {
-                                    AppControllers.match.updatePlayerScore(
-                                      match.matchId,
-                                      player.playerId,
-                                      playerScore - 1,
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.remove_circle),
-                                color: isPaused ? Colors.grey : Colors.red,
-                              ),
+                              // Score display and add button
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey.shade300),
                                   borderRadius: BorderRadius.circular(6),
@@ -977,12 +986,13 @@ class MatchDetailScreen extends StatelessWidget {
                                 child: Text(
                                   '$playerScore',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black,
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               IconButton(
                                 onPressed: isPaused ? null : () {
                                   AppControllers.match.updatePlayerScore(
@@ -993,6 +1003,7 @@ class MatchDetailScreen extends StatelessWidget {
                                 },
                                 icon: const Icon(Icons.add_circle),
                                 color: isPaused ? Colors.grey : Colors.green,
+                                iconSize: 32,
                               ),
                             ],
                           ),
@@ -1775,6 +1786,18 @@ class MatchDetailScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            // UNDO button - for last score undo 
+            TextButton.icon(
+              onPressed: () {
+                Get.back();
+                AppControllers.match.undoLastScore(matchId);
+              },
+              icon: const Icon(Icons.undo, size: 18),
+              label: const Text('UNDO'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.orange.shade700,
+              ),
+            ),
             TextButton(
               onPressed: () {
                 Get.back();

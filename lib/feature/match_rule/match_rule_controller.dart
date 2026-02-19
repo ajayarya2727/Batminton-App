@@ -19,7 +19,18 @@ class MatchController extends GetxController {
   final RxInt breakStopwatch = 0.obs;
   Timer? _breakTimer;
   
+  // Simple undo functionality - stores score actions as Map
+  final RxList<Map<String, dynamic>> scoreHistory = <Map<String, dynamic>>[].obs;
+  
+  // Clear score history when starting new round
+  void clearScoreHistory() {
+    scoreHistory.clear();
+  }
+  
   Future<void> initializeMatchWithService(String matchId, String initialServer) async {
+    // Clear score history for new match
+    clearScoreHistory();
+    
     final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
@@ -92,6 +103,12 @@ class MatchController extends GetxController {
     if (currentRound == null) return;
     
     final prevPlayerScore = currentRound.playerScores[playerId] ?? 0;
+    
+    // Only allow score increase (no decrease button)
+    if (newPlayerScore <= prevPlayerScore) return;
+    
+    final previousServer = getCurrentServer(match);
+    
     final updatedPlayerScores = Map<String, int>.from(currentRound.playerScores);
     updatedPlayerScores[playerId] = newPlayerScore;
     
@@ -110,25 +127,18 @@ class MatchController extends GetxController {
     List<String> updatedPointSequence = List<String>.from(currentRound.pointSequence);
     String? newCurrentServer;
     
-    if (newPlayerScore > prevPlayerScore) {
-      updatedPointSequence.add(playerId);
-      newCurrentServer = playerId;
-    } else if (newPlayerScore < prevPlayerScore) {
-      if (updatedPointSequence.isNotEmpty) {
-        updatedPointSequence.removeLast();
-        newCurrentServer = updatedPointSequence.isEmpty 
-            ? currentRound.initialServer 
-            : updatedPointSequence.last;
-      } else {
-        newCurrentServer = getCurrentServer(match);
-      }
-    } else {
-      newCurrentServer = getCurrentServer(match);
-    }
+    // Score increased - add to history
+    updatedPointSequence.add(playerId);
+    newCurrentServer = playerId;
     
-    if (updatedPointSequence.isEmpty) {
-      newCurrentServer = currentRound.initialServer;
-    }
+    // Track this action for undo - simple Map
+    scoreHistory.add({
+      'playerId': playerId,
+      'previousScore': prevPlayerScore,
+      'newScore': newPlayerScore,
+      'previousServer': previousServer,
+      'newServer': newCurrentServer,
+    });
     
     final updatedRound = currentRound.copyWith(
       playerScores: updatedPlayerScores,
@@ -192,6 +202,74 @@ class MatchController extends GetxController {
     AppControllers.myMatches.matches.refresh();
     await _saveLiveMatchJson(AppControllers.myMatches.matches[matchIndex]);
     _logScoreUpdate(AppControllers.myMatches.matches[matchIndex]);
+  }
+
+  // Undo last score action - simple implementation
+  Future<void> undoLastScore(String matchId) async {
+    if (scoreHistory.isEmpty) {
+      debugPrint('No score history to undo');
+      return;
+    }
+    
+    final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
+    if (matchIndex == -1) return;
+    
+    final match = AppControllers.myMatches.matches[matchIndex];
+    final currentRound = getCurrentRound(match);
+    if (currentRound == null) return;
+    
+    // Get last action from history
+    final lastAction = scoreHistory.removeLast();
+    final playerId = lastAction['playerId'] as String;
+    final previousScore = lastAction['previousScore'] as int;
+    final previousServer = lastAction['previousServer'] as String?;
+    
+    debugPrint('Undoing score: Player $playerId from ${lastAction['newScore']} to $previousScore');
+    
+    // Revert player score
+    final updatedPlayerScores = Map<String, int>.from(currentRound.playerScores);
+    updatedPlayerScores[playerId] = previousScore;
+    
+    // Recalculate team scores
+    int newTeam1Score = 0;
+    int newTeam2Score = 0;
+    for (final player in match.team1.players) {
+      newTeam1Score += updatedPlayerScores[player.playerId] ?? 0;
+    }
+    for (final player in match.team2.players) {
+      newTeam2Score += updatedPlayerScores[player.playerId] ?? 0;
+    }
+    
+    // Remove last point from sequence
+    List<String> updatedPointSequence = List<String>.from(currentRound.pointSequence);
+    if (updatedPointSequence.isNotEmpty) {
+      updatedPointSequence.removeLast();
+    }
+    
+    // Restore previous server
+    String? restoredServer = previousServer ?? currentRound.initialServer;
+    if (updatedPointSequence.isNotEmpty) {
+      restoredServer = updatedPointSequence.last;
+    } else {
+      restoredServer = currentRound.initialServer;
+    }
+    
+    final updatedRound = currentRound.copyWith(
+      playerScores: updatedPlayerScores,
+      team1Score: newTeam1Score,
+      team2Score: newTeam2Score,
+      pointSequence: updatedPointSequence,
+      currentServer: restoredServer,
+    );
+    
+    final updatedRounds = List<BadmintonRoundModel>.from(match.rounds);
+    updatedRounds[match.currentRoundNumber - 1] = updatedRound;
+    AppControllers.myMatches.matches[matchIndex] = match.copyWith(rounds: updatedRounds);
+    
+    await StorageService.saveMatchToStorage(AppControllers.myMatches.matches[matchIndex]);
+    AppControllers.myMatches.matches.refresh();
+    
+    debugPrint(' Undo complete: Team1=$newTeam1Score, Team2=$newTeam2Score, Server=$restoredServer');
   }
 
   Future<void> manuallySetService(String matchId, String servingPlayerId) async {
@@ -271,6 +349,9 @@ class MatchController extends GetxController {
   }
 
   Future<void> startNextRound(String matchId) async {
+    // Clear score history for new round
+    clearScoreHistory();
+    
     final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
@@ -328,6 +409,9 @@ class MatchController extends GetxController {
   }
 
   Future<void> startNextRoundWithService(String matchId, String initialServer) async {
+    // Clear score history for new round
+    clearScoreHistory();
+    
     final matchIndex = AppControllers.myMatches.matches.indexWhere((match) => match.matchId == matchId);
     if (matchIndex == -1) return;
     
